@@ -7,14 +7,12 @@
 // read-only listing on constrained hardware a ~150-line client is far lighter.
 // Revisit only if we need broad API coverage.
 //
-// STATUS: Phase 1 implements read-only List() + Available(). Still ROADMAP:
+// STATUS: List(), Available(), Logs() (Phase 1) and Start/Stop/Restart()
+// (Phase 2, see actions.go) are implemented. Controls are CSRF-protected +
+// audited in the HTTP layer.
 //
-//	Logs(ctx, id, follow) (io.ReadCloser, error) // live tail via SSE
-//	Start/Stop/Restart(ctx, id) error            // Phase 2, privileged + audited
-//
-// GUARDRAILS (Phase 2): the gateway-manager container must refuse to stop
-// itself (Container.IsSelf marks it); warn before stopping Torizon-critical
-// services. No image building/pulling in MVP.
+// GUARDRAILS: the gateway-manager container refuses to stop/restart itself
+// (IsSelf; enforced in the handler). No image building/pulling in MVP.
 //
 // SECURITY: the Docker socket is root-equivalent on the host — the biggest
 // attack surface. See backlog "Docker socket proxy". docs/ARCHITECTURE.md §5, §8.3.

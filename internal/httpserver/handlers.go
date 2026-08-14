@@ -11,6 +11,45 @@ import (
 	"github.com/toradex/torizon-gateway-app/internal/network"
 )
 
+// handleContainerAction performs start/stop/restart on a container, guarding
+// against the gateway stopping itself. CSRF-protected and audited.
+func (s *Server) handleContainerAction(action string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !checkCSRF(r) {
+			http.Error(w, "invalid CSRF token", http.StatusForbidden)
+			return
+		}
+		if s.containers == nil {
+			http.Error(w, "docker unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		id := r.PathValue("id")
+		// Guardrail: never stop/restart the gateway app itself.
+		if (action == "stop" || action == "restart") && s.containers.IsSelf(id) {
+			http.Error(w, "refusing to "+action+" the gateway app itself", http.StatusBadRequest)
+			return
+		}
+		ctx := r.Context()
+		var err error
+		switch action {
+		case "start":
+			err = s.containers.Start(ctx, id)
+		case "stop":
+			err = s.containers.Stop(ctx, id)
+		case "restart":
+			err = s.containers.Restart(ctx, id)
+		}
+		user := userFrom(r).Username
+		if err != nil {
+			_ = s.store.AddAudit(user, "container_"+action+"_failed", id+": "+err.Error(), clientIP(r))
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		_ = s.store.AddAudit(user, "container_"+action, id, clientIP(r))
+		http.Redirect(w, r, "/containers", http.StatusSeeOther)
+	}
+}
+
 // networkData is the template model for the read-only Network view.
 type networkData struct {
 	layout

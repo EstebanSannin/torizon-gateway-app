@@ -327,8 +327,8 @@ Container + Go server + embedded HTMX UI + HTTPS + first-boot auth + mDNS. "Hell
 **Phase 1 — read-only visibility (lowest risk, fast value)** — ✅ _complete_
 System/board info dashboard (HAL) incl. serial (device-tree) + data storage · container **list** (read-only) via a minimal stdlib Docker socket client · container **logs** (live SSE tail) · **Updates** page with current OS version. Host **network interfaces** intentionally moved to Phase 2 (a bridged container can't see the host netns; done properly via NetworkManager/D-Bus). All validated on a Verdin iMX8M Plus (Torizon OS 7.7.0).
 
-**Phase 2 — safe mutations** — _in progress_
-Auth (setup/login/sessions/CSRF/audit) ✅ · Network read-only ✅ · **Network editing with confirm-or-revert anti-lockout** ✅ (NM checkpoint auto-rollback; validated on-device) · container start/stop/restart ⏳.
+**Phase 2 — safe mutations** — ✅ _complete_
+Auth (setup/login/sessions/CSRF/audit) · Network read-only · **Network editing with confirm-or-revert anti-lockout** (NM checkpoint auto-rollback) · container **start/stop/restart** (self-guardrail, CSRF, audit). All validated on-device.
 Finding: NetworkManager **writes are permitted from the unprivileged container** (polkit allows the device user), so network mutation does not by itself force the native deployment — but the single-compose wipe (§13) still does for persistence.
 
 **Phase 3 — offline updates**

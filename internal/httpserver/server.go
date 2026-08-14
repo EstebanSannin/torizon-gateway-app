@@ -74,6 +74,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /network/cancel", s.requireAuth(s.handleNetworkCancel))
 	s.mux.HandleFunc("GET /containers", s.requireAuth(s.handleContainers))
 	s.mux.HandleFunc("GET /containers/{id}/logs", s.requireAuth(s.handleContainerLogsPage))
+	s.mux.HandleFunc("POST /containers/{id}/start", s.requireAuth(s.handleContainerAction("start")))
+	s.mux.HandleFunc("POST /containers/{id}/stop", s.requireAuth(s.handleContainerAction("stop")))
+	s.mux.HandleFunc("POST /containers/{id}/restart", s.requireAuth(s.handleContainerAction("restart")))
 	s.mux.HandleFunc("GET /updates", s.requireAuth(s.handleUpdates))
 
 	// Live streams (SSE) — protected.
