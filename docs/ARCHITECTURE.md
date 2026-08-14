@@ -280,8 +280,16 @@ Everything behind auth except `/setup` (first boot) and login.
 
 ## 13. Build & distribution
 
-- **Multi-arch container** (`linux/arm64` primary for Verdin/Zinnia; `arm/v7`, `amd64` for dev) built with Docker buildx. Multi-stage: Go build stage → minimal runtime (distroless/`scratch` + certs).
-- **Delivered as a Torizon app** (docker-compose), **baked into the Torizon OS image** via TorizonCore Builder so it's present on first boot; also updatable via the fleet / as part of a Lockbox.
+### ⚠ Deployment model — a Torizon constraint drives this
+Torizon OS runs a **single docker-compose**, managed by an aktualizr secondary. When a customer deploys *their* application (a new compose), the update system **removes all existing containers** and pulls the new set. A gateway app shipped as a normal Torizon container would therefore **disappear the moment the customer deploys their app** — unacceptable for a management tool that must always be present.
+
+**Two models, kept open:**
+
+1. **Native (Yocto) — likely production path.** Bake the app into the OS image as a **bitbake recipe + systemd service**, running directly on the host. It survives application updates and is always available. Because the app is a **single static `CGO_ENABLED=0` Go binary with the UI embedded and pure-Go dependencies (incl. SQLite)**, the recipe is trivial and needs no native libs. Native also *simplifies* host access — direct NetworkManager D-Bus, docker.sock, `/var/sota`, no mounts or `group_add`.
+2. **Container (docker-compose) — dev & validation only.** Multi-arch image (`linux/arm64` primary; `amd64` for dev) via buildx, distroless runtime. Used now for the fast dev loop; viable in production only if bundled into the *same* compose the customer uses (fragile).
+
+**The app stays deployment-agnostic** so the *same binary* runs either way: the HAL resolves host paths (`/host/*` mount vs native `/proc`,`/etc`), and all config is env-driven (`GATEWAY_DATA_DIR`, etc.). See backlog for validating the wipe behavior and prototyping the Yocto recipe.
+
 - **Versioning:** semver; version embedded in binary and shown in UI/footer.
 - **CI:** build, unit tests, HAL tests with fixtures, multi-arch image push. (Hardware-in-the-loop tests later.)
 
@@ -337,7 +345,9 @@ TOTP 2FA · BYO TLS cert · RBAC groundwork · i18n scaffolding · backup/restor
 | **Offline-update host trigger** (former open decision #4) — pin the exact spool dir + trigger + status interface for `aktualizr` offline **from inside a container** on current Torizon OS. | Needs research against a running Torizon OS image; blocks only the *apply* flow, not the read-only version view. | Before Phase 3 |
 | ~~**"Torizon Gateway" wordmark**~~ ✅ Done — `web/static/brand/torizon-gateway-logo[-dark].svg`, wired into the sidebar. | — | Done |
 | **Parse-once template cache** — templates are re-parsed per request in the scaffold. | Fine for dev; optimize before GA. | Before GA |
-| **Health-check flag** — implement `gateway-manager -healthcheck` referenced by compose healthcheck. | Minor. | Phase 1 |
+| ~~**Health-check flag**~~ ✅ Done — `gateway-manager -healthcheck`. | — | Done |
+| **Validate the single-compose wipe** — on-device: deploy a second compose and confirm the gateway container is removed by the update system. | Confirms the native-Yocto necessity (§13). | Before committing to a production deployment model |
+| **Yocto native build** — bitbake recipe + systemd unit; run the binary natively on the OS image (survives app updates). | Likely production path (§13). | Phase 2–3 timeframe |
 
 ---
 

@@ -18,6 +18,7 @@ Full design: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Brand/UI: [`docs/DE
 6. **No blanket `--privileged`.** Grant only the specific mounts in `deploy/docker-compose.yml`. See the privilege model in ARCHITECTURE §5.
 7. **Security is not optional.** Real auth (argon2id), HTTPS only, CSRF on state-changing requests, and an **audit record for every mutation**. No default credentials, ever.
 8. **Use design tokens.** Never hard-code a color/font in a template. Reference the CSS variables in `web/static/css/tokens.css`.
+9. **Deployment-agnostic (native *or* container).** Torizon OS runs a single docker-compose and wipes other containers when a customer app is deployed, so the product likely ships **native via Yocto** (systemd service), not as a container. The SAME binary must run both ways: resolve host paths via the HAL (`/host/*` vs native `/proc`,`/etc`), keep all paths env-configurable, and keep dependencies **pure-Go / no cgo** so the Yocto recipe stays trivial. See docs/ARCHITECTURE.md §13.
 
 ## Repository map
 
