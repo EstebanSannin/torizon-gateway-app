@@ -1,0 +1,88 @@
+/*
+ * Torizon Gateway — Application styles.
+ * Uses only semantic tokens from tokens.css. Keep this small and build-less.
+ */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-heading);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--heading-letter-spacing);
+  margin: 0 0 var(--space-3);
+}
+h1 { font-size: 2.25rem; }
+h2 { font-size: 1.5rem; letter-spacing: 0; }
+h3 { font-size: 1.125rem; letter-spacing: 0; }
+
+a { color: var(--color-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---- App shell: sidebar + content ---- */
+.app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+.sidebar {
+  background: var(--color-sidebar-bg);
+  color: var(--color-sidebar-text);
+  padding: var(--space-5) var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-2);
+}
+.sidebar .brand { display: flex; align-items: center; margin-bottom: var(--space-6); padding: 0 var(--space-2); }
+.sidebar .brand .logo { width: 100%; max-width: 200px; height: auto; }
+.sidebar nav a {
+  display: flex; align-items: center; gap: var(--space-3);
+  color: var(--color-sidebar-text); padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-md); font-size: var(--font-size-small); text-decoration: none;
+}
+.sidebar nav a:hover { background: rgba(255,255,255,0.06); color: var(--tn-white); }
+.sidebar nav a.active { background: var(--color-sidebar-active); color: var(--tn-white); }
+
+.content { padding: var(--space-6); max-width: 1200px; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6); }
+
+/* ---- Cards / grid ---- */
+.grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.card {
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); padding: var(--space-5); box-shadow: var(--shadow-card);
+}
+.card .label { color: var(--color-text-muted); font-size: var(--font-size-small); margin-bottom: var(--space-1); }
+.card .value { font-size: 1.75rem; font-weight: var(--font-weight-bold); color: var(--color-heading); letter-spacing: -0.5px; }
+
+/* ---- Badges / status ---- */
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: var(--font-weight-bold); }
+.badge--running, .badge--ok { background: var(--tn-light-blue); color: var(--tn-success); }
+.badge--stopped { background: var(--tn-lightest-gray); color: var(--tn-dark-gray); }
+.badge--warn { background: var(--tn-light-orange); color: var(--tn-secondary-dark); }
+.badge--error { background: #FDE7E7; color: var(--tn-danger); }
+
+/* ---- Buttons ---- */
+.btn {
+  font-family: inherit; font-size: var(--font-size-small); font-weight: var(--font-weight-bold);
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-5); cursor: pointer;
+}
+.btn--primary { background: var(--color-accent); color: var(--color-accent-contrast); }
+.btn--primary:hover { filter: brightness(0.95); }
+.btn--ghost { background: transparent; border-color: var(--color-border); color: var(--color-text); }
+
+/* ---- Tables ---- */
+table { width: 100%; border-collapse: collapse; background: var(--color-surface); border-radius: var(--radius-lg); overflow: hidden; }
+th, td { text-align: left; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); font-size: var(--font-size-small); }
+th { color: var(--color-text-muted); font-weight: var(--font-weight-bold); }
+
+@media (max-width: 720px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { flex-direction: row; overflow-x: auto; }
+}

@@ -1,0 +1,38 @@
+# Torizon Gateway — Torizon application definition.
+# Deployed as a Torizon app; bake into the OS image via TorizonCore Builder so
+# it's present on first boot. See docs/ARCHITECTURE.md §5 (privilege model) & §13.
+#
+# ⚠ Privilege model: NO blanket --privileged. Only the specific mounts below.
+#   The Docker socket is root-equivalent on the host — see the "socket proxy"
+#   backlog item before GA.
+
+services:
+  gateway-manager:
+    image: ${REGISTRY:-torizon}/gateway-manager:${TAG:-latest}
+    container_name: torizon-gateway
+    restart: unless-stopped
+    ports:
+      - "443:8443"          # HTTPS
+    environment:
+      - GATEWAY_DATA_DIR=/data
+      - GATEWAY_HOSTNAME=zinnia
+    volumes:
+      # Container management (Docker engine). Root-equivalent — see backlog.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Network configuration (NetworkManager over system D-Bus).
+      - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
+      # Board info (read-only).
+      - /proc/device-tree:/host/device-tree:ro
+      - /etc/os-release:/host/os-release:ro
+      # Offline updates spool (path to confirm against Torizon OS — backlog #4).
+      # - /var/sota:/host/sota
+      # App-owned persistent state (SQLite DB, TLS cert).
+      - gateway-data:/data
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/gateway-manager", "-healthcheck"]  # TODO: implement flag
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  gateway-data:

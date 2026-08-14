@@ -1,0 +1,34 @@
+{{define "content"}}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <span class="badge badge--ok">{{.Board.Kind}}</span>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="label">Module</div>
+    <div class="value" style="font-size:1.25rem">{{.Board.Model}}</div>
+  </div>
+  <div class="card">
+    <div class="label">Torizon OS</div>
+    <div class="value" style="font-size:1.25rem">{{.Board.OSVersion}}</div>
+  </div>
+  <div class="card">
+    <div class="label">Serial</div>
+    <div class="value" style="font-size:1.25rem">{{if .Board.SerialNumber}}{{.Board.SerialNumber}}{{else}}—{{end}}</div>
+  </div>
+  <div class="card">
+    <div class="label">Kernel</div>
+    <div class="value" style="font-size:1.25rem">{{.Board.KernelVersion}}</div>
+  </div>
+</div>
+
+<h2 style="margin-top:32px">Live health</h2>
+<!-- Live values pushed via SSE (see /sse/metrics). Static snapshot for scaffold. -->
+<div class="grid" hx-ext="sse" sse-connect="/sse/metrics">
+  <div class="card"><div class="label">CPU load (1m)</div><div class="value" sse-swap="cpu">{{printf "%.2f" .Metrics.CPULoad1}}</div></div>
+  <div class="card"><div class="label">Memory used</div><div class="value" sse-swap="mem">{{.MemUsedHuman}}</div></div>
+  <div class="card"><div class="label">SoC temp</div><div class="value" sse-swap="temp">{{if gt .Metrics.SoCTempCelsius 0.0}}{{printf "%.1f°C" .Metrics.SoCTempCelsius}}{{else}}—{{end}}</div></div>
+  <div class="card"><div class="label">Uptime</div><div class="value" sse-swap="uptime" style="font-size:1.25rem">{{.UptimeHuman}}</div></div>
+</div>
+{{end}}

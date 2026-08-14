@@ -1,0 +1,33 @@
+{{define "base"}}<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · Torizon Gateway</title>
+  <link rel="icon" href="/static/brand/torizon-avatar.svg">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <!-- Vendored, embedded (no CDN). Vendored via `make vendor-ui`. -->
+  <script src="/static/vendor/htmx.min.js" defer></script>
+  <script src="/static/vendor/htmx-ext-sse.js" defer></script>
+  <script src="/static/vendor/alpine.min.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="logo" src="/static/brand/torizon-gateway-logo-dark.svg" alt="Torizon Gateway">
+      </div>
+      <nav>
+        <a href="/"           class="{{if eq .Nav "dashboard"}}active{{end}}">Dashboard</a>
+        <a href="/network"    class="{{if eq .Nav "network"}}active{{end}}">Network</a>
+        <a href="/containers" class="{{if eq .Nav "containers"}}active{{end}}">Containers</a>
+        <a href="/updates"    class="{{if eq .Nav "updates"}}active{{end}}">Updates</a>
+      </nav>
+    </aside>
+    <main class="content">
+      {{template "content" .}}
+    </main>
+  </div>
+</body>
+</html>{{end}}

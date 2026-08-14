@@ -1,0 +1,120 @@
+/*
+ * Torizon Gateway — Design Tokens
+ * Source of truth: docs/DESIGN-SYSTEM.md (derived from official Torizon.io brand guidelines).
+ * Do NOT hard-code colors elsewhere — always reference these variables.
+ *
+ * Two layers:
+ *   1) --tn-*      raw brand palette (never change values; they are the brand)
+ *   2) semantic    role tokens (--color-bg, --color-accent, ...) that the UI uses.
+ *      Only semantic tokens are remapped for dark mode.
+ */
+
+:root {
+  /* ---- 1. Raw brand palette (Torizon.io Colors) ---- */
+
+  /* Primary */
+  --tn-primary:            #001F3F;
+  --tn-primary-light:      #0092FF;
+  --tn-primary-medium:     #003266;
+  --tn-primary-dark:       #00172E;
+
+  /* Secondary (amber) */
+  --tn-secondary:          #FFC107;
+  --tn-secondary-light:    #FFD557;
+  --tn-secondary-medium:   #FAA500;
+  --tn-secondary-dark:     #FA8700;
+
+  /* Tertiary (indigo) */
+  --tn-tertiary:           #2F39B2;
+  --tn-tertiary-light:     #7A81DC;
+  --tn-tertiary-medium:    #4954CF;
+  --tn-tertiary-dark:      #202779;
+
+  /* Text */
+  --tn-text-primary:       #1A4775;
+  --tn-text-primary-dark:  #00172E;
+  --tn-text-primary-light: #99ADC2;
+
+  /* Backgrounds / tints */
+  --tn-light-blue:         #D6EDFF;
+  --tn-light-orange:       #FFF2CC;
+  --tn-light-indigo:       #EBECF9;
+  --tn-light-gray:         #E5FBFF;
+  --tn-lightest-gray:      #F8F8F8;
+  --tn-medium-gray:        #BFBFBF;
+  --tn-normal-gray:        #A6A6A6;
+  --tn-dark-gray:          #666666;
+
+  --tn-white:              #FFFFFF;
+  --tn-black:              #000000;
+
+  /* Logo mark palette (from the official avatar SVG — NOT identical to the web
+     palette above; use these only when matching the logo artwork). */
+  --tn-logo-blue:          #0096DC;
+  --tn-logo-blue-dark:     #00508C;
+  --tn-logo-amber:         #FAAF00;
+
+  /* Status colors (derived, brand-consistent) */
+  --tn-success:            #2E7D32;
+  --tn-warning:            var(--tn-secondary-medium);
+  --tn-danger:             #C62828;
+  --tn-info:               var(--tn-primary-light);
+
+  /* ---- 2. Semantic role tokens (LIGHT, default) ---- */
+  --color-bg:              var(--tn-lightest-gray);
+  --color-surface:         var(--tn-white);
+  --color-surface-alt:     var(--tn-light-gray);
+  --color-border:          #E2E8F0;
+  --color-text:            var(--tn-text-primary-dark);
+  --color-text-muted:      var(--tn-dark-gray);
+  --color-heading:         var(--tn-primary);
+  --color-accent:          var(--tn-primary-light);
+  --color-accent-contrast: var(--tn-white);
+  --color-brand:           var(--tn-primary);
+  --color-highlight:       var(--tn-secondary);
+  --color-sidebar-bg:      var(--tn-primary);
+  --color-sidebar-text:    var(--tn-text-primary-light);
+  --color-sidebar-active:  var(--tn-primary-light);
+
+  /* ---- Typography (Torizon.io Typography = Inter) ---- */
+  --font-family-base: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-weight-light:   300;
+  --font-weight-regular: 400;
+  --font-weight-bold:    700;
+
+  --font-size-body:   1.125rem; /* 18px, brand body size */
+  --font-size-small:  1rem;     /* 16px */
+  --line-height-body: 1.5;
+  --heading-letter-spacing: -1px;
+
+  /* ---- Spacing / shape ---- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-8: 48px;
+  --shadow-card: 0 1px 3px rgba(0, 23, 46, 0.08), 0 1px 2px rgba(0, 23, 46, 0.06);
+}
+
+/* ---- Dark mode: remap ONLY semantic tokens (raw palette stays) ---- */
+:root[data-theme="dark"],
+:root:not([data-theme="light"]) {
+  /* default is light; dark applied explicitly via data-theme="dark".
+     If you want auto dark, move these into @media (prefers-color-scheme: dark). */
+}
+
+:root[data-theme="dark"] {
+  --color-bg:              var(--tn-primary-dark);
+  --color-surface:         var(--tn-primary-medium);
+  --color-surface-alt:     #012a54;
+  --color-border:          #0a3a63;
+  --color-text:            #E6EEF6;
+  --color-text-muted:      var(--tn-text-primary-light);
+  --color-heading:         var(--tn-white);
+  --color-accent:          var(--tn-primary-light);
+  --color-accent-contrast: var(--tn-primary-dark);
+  --color-brand:           var(--tn-white);
+  --color-sidebar-bg:      var(--tn-primary-dark);
+  --color-sidebar-text:    var(--tn-text-primary-light);
+  --color-sidebar-active:  var(--tn-primary-light);
+}

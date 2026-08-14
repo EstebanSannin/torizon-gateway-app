@@ -1,0 +1,76 @@
+package httpserver
+
+import (
+	"fmt"
+	"html/template"
+	"net/http"
+
+	"github.com/toradex/torizon-gateway-app/web"
+)
+
+// render parses base.html + the given page file (both from the embedded FS) and
+// executes the "base" template. Templates are re-parsed per request for now;
+// switch to a parse-once cache before GA.
+func render(w http.ResponseWriter, pageFile string, data any) {
+	tmpl, err := template.ParseFS(web.Templates, "templates/base.html", "templates/"+pageFile)
+	if err != nil {
+		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
+		http.Error(w, "render error: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// renderInline parses base.html plus an inline `{{define "content"}}...{{end}}`
+// string. Used for simple placeholder pages.
+func renderInline(w http.ResponseWriter, contentTmpl string, data any) {
+	tmpl, err := template.ParseFS(web.Templates, "templates/base.html")
+	if err != nil {
+		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if _, err := tmpl.Parse(contentTmpl); err != nil {
+		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
+		http.Error(w, "render error: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// ---- humanize helpers ----
+
+func humanBytes(b uint64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := uint64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
+}
+
+func humanDuration(sec int64) string {
+	d := sec / 86400
+	h := (sec % 86400) / 3600
+	m := (sec % 3600) / 60
+	switch {
+	case d > 0:
+		return fmt.Sprintf("%dd %dh", d, h)
+	case h > 0:
+		return fmt.Sprintf("%dh %dm", h, m)
+	default:
+		return fmt.Sprintf("%dm", m)
+	}
+}
+
+func tempStr(c float64) string {
+	if c <= 0 {
+		return "—"
+	}
+	return fmt.Sprintf("%.1f°C", c)
+}
