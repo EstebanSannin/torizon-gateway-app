@@ -22,6 +22,8 @@ type Config struct {
 	Hostname string
 	// DockerSocket is the path to the Docker engine socket (container management).
 	DockerSocket string
+	// DBusSocket is the path to the system D-Bus socket (NetworkManager).
+	DBusSocket string
 	// SessionTTL is how long a login session stays valid.
 	SessionTTL time.Duration
 	// DevMode relaxes some behavior for local development (never in production).
@@ -38,6 +40,7 @@ func Load() Config {
 		TLSKeyFile:   env("GATEWAY_TLS_KEY", filepath.Join(dataDir, "tls", "key.pem")),
 		Hostname:     env("GATEWAY_HOSTNAME", "zinnia"),
 		DockerSocket: env("GATEWAY_DOCKER_SOCKET", "/var/run/docker.sock"),
+		DBusSocket:   env("GATEWAY_DBUS_SOCKET", "/run/dbus/system_bus_socket"),
 		SessionTTL:   envDuration("GATEWAY_SESSION_TTL", 24*time.Hour),
 		DevMode:      env("GATEWAY_DEV_MODE", "") == "1",
 	}

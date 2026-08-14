@@ -24,6 +24,7 @@ import (
 	"github.com/toradex/torizon-gateway-app/internal/containers"
 	"github.com/toradex/torizon-gateway-app/internal/hal"
 	"github.com/toradex/torizon-gateway-app/internal/httpserver"
+	"github.com/toradex/torizon-gateway-app/internal/network"
 	"github.com/toradex/torizon-gateway-app/internal/store"
 )
 
@@ -54,7 +55,8 @@ func main() {
 
 	authSvc := auth.New(st, cfg.SessionTTL)
 	cnt := containers.New(cfg.DockerSocket)
-	srv := httpserver.New(cfg, board, cnt, authSvc, st)
+	net := network.New(cfg.DBusSocket)
+	srv := httpserver.New(cfg, board, cnt, net, authSvc, st)
 	httpSrv := &http.Server{
 		Addr:              cfg.ListenAddr,
 		Handler:           srv.Handler(),

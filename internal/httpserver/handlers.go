@@ -8,7 +8,32 @@ import (
 
 	"github.com/toradex/torizon-gateway-app/internal/containers"
 	"github.com/toradex/torizon-gateway-app/internal/hal"
+	"github.com/toradex/torizon-gateway-app/internal/network"
 )
+
+// networkData is the template model for the read-only Network view.
+type networkData struct {
+	layout
+	Available bool
+	Ifaces    []network.Iface
+	Err       string
+}
+
+// handleNetwork lists host network interfaces from NetworkManager (read-only).
+func (s *Server) handleNetwork(w http.ResponseWriter, r *http.Request) {
+	data := networkData{layout: s.layoutFor(w, r, "Network", "network")}
+	if s.network == nil || !s.network.Available() {
+		render(w, "network.html", data)
+		return
+	}
+	data.Available = true
+	ifaces, err := s.network.Interfaces()
+	if err != nil {
+		data.Err = err.Error()
+	}
+	data.Ifaces = ifaces
+	render(w, "network.html", data)
+}
 
 // handleContainerLogsPage renders the live-log viewer for one container.
 func (s *Server) handleContainerLogsPage(w http.ResponseWriter, r *http.Request) {

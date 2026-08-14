@@ -8,6 +8,7 @@ go 1.25.0
 //   github.com/godbus/dbus/v5            // NetworkManager over system D-Bus (Phase 2 network)
 
 require (
+	github.com/godbus/dbus/v5 v5.2.2
 	golang.org/x/crypto v0.55.0
 	modernc.org/sqlite v1.56.0
 )

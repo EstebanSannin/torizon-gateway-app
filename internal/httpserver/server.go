@@ -12,6 +12,7 @@ import (
 	"github.com/toradex/torizon-gateway-app/internal/config"
 	"github.com/toradex/torizon-gateway-app/internal/containers"
 	"github.com/toradex/torizon-gateway-app/internal/hal"
+	"github.com/toradex/torizon-gateway-app/internal/network"
 	"github.com/toradex/torizon-gateway-app/internal/store"
 	"github.com/toradex/torizon-gateway-app/internal/sysinfo"
 	"github.com/toradex/torizon-gateway-app/web"
@@ -22,15 +23,16 @@ type Server struct {
 	cfg        config.Config
 	board      hal.BoardInfo
 	containers *containers.Service
+	network    *network.Service
 	auth       *auth.Service
 	store      *store.Store
 	mux        *http.ServeMux
 }
 
 // New builds the server and registers routes.
-func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, a *auth.Service, st *store.Store) *Server {
+func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, net *network.Service, a *auth.Service, st *store.Store) *Server {
 	s := &Server{
-		cfg: cfg, board: board, containers: cnt, auth: a, store: st,
+		cfg: cfg, board: board, containers: cnt, network: net, auth: a, store: st,
 		mux: http.NewServeMux(),
 	}
 	s.routes()
@@ -60,7 +62,7 @@ func (s *Server) routes() {
 
 	// Pages (protected).
 	s.mux.HandleFunc("GET /{$}", s.requireAuth(s.handleDashboard))
-	s.mux.HandleFunc("GET /network", s.requireAuth(s.placeholder("network", "Network")))
+	s.mux.HandleFunc("GET /network", s.requireAuth(s.handleNetwork))
 	s.mux.HandleFunc("GET /containers", s.requireAuth(s.handleContainers))
 	s.mux.HandleFunc("GET /containers/{id}/logs", s.requireAuth(s.handleContainerLogsPage))
 	s.mux.HandleFunc("GET /updates", s.requireAuth(s.handleUpdates))
