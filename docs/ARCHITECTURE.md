@@ -347,7 +347,7 @@ TOTP 2FA · BYO TLS cert · RBAC groundwork · i18n scaffolding · backup/restor
 | ~~**"Torizon Gateway" wordmark**~~ ✅ Done — `web/static/brand/torizon-gateway-logo[-dark].svg`, wired into the sidebar. | — | Done |
 | **Parse-once template cache** — templates are re-parsed per request in the scaffold. | Fine for dev; optimize before GA. | Before GA |
 | ~~**Health-check flag**~~ ✅ Done — `gateway-manager -healthcheck`. | — | Done |
-| **Validate the single-compose wipe** — on-device: deploy a second compose and confirm the gateway container is removed by the update system. | Confirms the native-Yocto necessity (§13). | Before committing to a production deployment model |
+| ~~**Validate the single-compose wipe**~~ ✅ Validated on-device (by mechanism): Torizon manages a single `docker-compose -p torizon` project; a customer app deployment replaces that compose (wipes what's in it), and the failure-recovery path escalates to `docker system prune --all --volumes`. Confirms native-Yocto for production. | — | Done |
 | **Yocto native build** — bitbake recipe + systemd unit; run the binary natively on the OS image (survives app updates). | Likely production path (§13). | Phase 2–3 timeframe |
 
 ---
