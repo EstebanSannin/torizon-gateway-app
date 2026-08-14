@@ -1,6 +1,6 @@
-# Binaries
+# Binaries (anchored to repo root / bin so they don't match cmd/gateway-manager/)
 /bin/
-gateway-manager
+/gateway-manager
 
 # Local dev data (SQLite DB, generated TLS cert)
 /.localdata/
