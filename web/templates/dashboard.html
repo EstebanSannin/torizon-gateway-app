@@ -1,39 +1,62 @@
 {{define "content"}}
-<div class="page-header">
-  <h1>Dashboard</h1>
-  <span class="badge badge--ok">{{.Board.Kind}}</span>
-</div>
-
+<div class="section-title"><h2>System</h2><span class="badge badge--plain">HAL: {{.Board.Kind}}</span><span class="rule"></span></div>
 <div class="grid">
-  <div class="card">
-    <div class="label">Module</div>
-    <div class="value" style="font-size:1.25rem">{{.Board.Model}}</div>
+  <div class="card tile">
+    <div class="tile-head">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg></span>
+      <span class="label">Module</span>
+    </div>
+    <div class="value sm">{{.Board.Model}}</div>
   </div>
-  <div class="card">
-    <div class="label">Torizon OS</div>
-    <div class="value" style="font-size:1.25rem">{{.Board.OSVersion}}</div>
+  <div class="card tile">
+    <div class="tile-head">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+      <span class="label">Torizon OS</span>
+    </div>
+    <div class="value sm">{{.Board.OSVersion}}</div>
   </div>
-  <div class="card">
-    <div class="label">Serial</div>
-    <div class="value" style="font-size:1.25rem">{{if .Board.SerialNumber}}{{.Board.SerialNumber}}{{else}}—{{end}}</div>
+  <div class="card tile">
+    <div class="tile-head">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h9l3 3v15H6z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></span>
+      <span class="label">Serial</span>
+    </div>
+    <div class="value sm">{{if .Board.SerialNumber}}{{.Board.SerialNumber}}{{else}}—{{end}}</div>
   </div>
-  <div class="card">
-    <div class="label">Kernel</div>
-    <div class="value" style="font-size:1.25rem">{{.Board.KernelVersion}}</div>
+  <div class="card tile">
+    <div class="tile-head">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></span>
+      <span class="label">Kernel</span>
+    </div>
+    <div class="value sm">{{.Board.KernelVersion}}</div>
   </div>
-  <div class="card">
-    <div class="label">Data storage ({{.Disk.Path}})</div>
-    <div class="value" style="font-size:1.25rem">{{.DiskUsedHuman}} / {{.DiskTotalHuman}}</div>
-    <div class="label">{{printf "%.0f%% used" .Disk.UsedPct}}</div>
+  <div class="card tile" style="grid-column: span 2;">
+    <div class="tile-head">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></span>
+      <span class="label">Data storage · {{.Disk.Path}}</span>
+    </div>
+    <div class="value">{{.DiskUsedHuman}} <span class="muted" style="font-size:1rem; font-weight:600">/ {{.DiskTotalHuman}}</span></div>
+    <div class="meter" style="margin-top:8px"><div class="meter-fill" style="width: {{printf "%.0f" .Disk.UsedPct}}%"></div></div>
+    <div class="sub">{{printf "%.0f%% used" .Disk.UsedPct}}</div>
   </div>
 </div>
 
-<h2 style="margin-top:32px">Live health</h2>
-<!-- Live values pushed via SSE (see /sse/metrics). Static snapshot for scaffold. -->
+<div class="section-title"><h2><span class="live-dot"></span>Live health</h2><span class="rule"></span></div>
 <div class="grid" hx-ext="sse" sse-connect="/sse/metrics">
-  <div class="card"><div class="label">CPU load (1m)</div><div class="value" sse-swap="cpu">{{printf "%.2f" .Metrics.CPULoad1}}</div></div>
-  <div class="card"><div class="label">Memory used</div><div class="value" sse-swap="mem">{{.MemUsedHuman}}</div></div>
-  <div class="card"><div class="label">SoC temp</div><div class="value" sse-swap="temp">{{if gt .Metrics.SoCTempCelsius 0.0}}{{printf "%.1f°C" .Metrics.SoCTempCelsius}}{{else}}—{{end}}</div></div>
-  <div class="card"><div class="label">Uptime</div><div class="value" sse-swap="uptime" style="font-size:1.25rem">{{.UptimeHuman}}</div></div>
+  <div class="card tile">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 2v3M14 2v3M10 19v3M14 19v3M2 10h3M2 14h3M19 10h3M19 14h3"/></svg></span><span class="label">CPU load (1m)</span></div>
+    <div class="value" sse-swap="cpu">{{printf "%.2f" .Metrics.CPULoad1}}</div>
+  </div>
+  <div class="card tile">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v10M11 7v10M15 7v10"/></svg></span><span class="label">Memory used</span></div>
+    <div class="value" sse-swap="mem">{{.MemUsedHuman}}</div>
+  </div>
+  <div class="card tile">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 13V5a2 2 0 014 0v8a4 4 0 11-4 0z"/></svg></span><span class="label">SoC temperature</span></div>
+    <div class="value" sse-swap="temp">{{if gt .Metrics.SoCTempCelsius 0.0}}{{printf "%.1f°C" .Metrics.SoCTempCelsius}}{{else}}—{{end}}</div>
+  </div>
+  <div class="card tile">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="label">Uptime</span></div>
+    <div class="value sm" sse-swap="uptime">{{.UptimeHuman}}</div>
+  </div>
 </div>
 {{end}}

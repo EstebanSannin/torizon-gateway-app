@@ -1,18 +1,18 @@
 {{define "content"}}
 <div class="page-header">
-  <h1>Containers</h1>
+  <p class="muted" style="margin:0">Containers managed by the Docker engine on this device.</p>
   {{if .Available}}<span class="badge badge--ok">docker connected</span>
   {{else}}<span class="badge badge--warn">docker unavailable</span>{{end}}
 </div>
 
 {{if not .Available}}
   <div class="card">
-    <p>The Docker engine socket is not reachable from this container.</p>
-    <p class="label">Ensure <code>/var/run/docker.sock</code> is mounted and the container
-    has access to the <code>docker</code> group.</p>
+    <p style="margin-top:0">The Docker engine socket is not reachable from this container.</p>
+    <p class="muted" style="margin-bottom:0">Ensure <code>/var/run/docker.sock</code> is mounted and the container has access to the <code>docker</code> group.</p>
   </div>
 {{else}}
-  {{if .Err}}<div class="card"><p class="badge badge--error">Error: {{.Err}}</p></div>{{end}}
+  {{if .Err}}<div class="form-error" style="margin-bottom:14px">Error: {{.Err}}</div>{{end}}
+  <div class="table-wrap"><div class="table-scroll">
   <table>
     <thead>
       <tr><th>Name</th><th>Image</th><th>State</th><th>Status</th><th>Ports</th><th>Actions</th></tr>
@@ -21,24 +21,24 @@
       {{$csrf := .CSRF}}
       {{range .Containers}}
       <tr>
-        <td>{{.Name}}{{if .IsSelf}} <span class="badge badge--ok">this app</span>{{end}}</td>
-        <td>{{.Image}}</td>
+        <td class="nowrap"><strong>{{.Name}}</strong>{{if .IsSelf}} <span class="badge badge--plain">this app</span>{{end}}</td>
+        <td><span class="mono trunc" title="{{.Image}}">{{.Image}}</span></td>
         <td>
           {{if eq .State "running"}}<span class="badge badge--running">running</span>
           {{else if eq .State "exited"}}<span class="badge badge--stopped">exited</span>
           {{else}}<span class="badge badge--warn">{{.State}}</span>{{end}}
         </td>
-        <td>{{.Status}}</td>
-        <td>{{range .Ports}}<div>{{.}}</div>{{else}}—{{end}}</td>
+        <td class="muted">{{.Status}}</td>
+        <td>{{range .Ports}}<div class="mono">{{.}}</div>{{else}}<span class="muted">—</span>{{end}}</td>
         <td>
           <div class="row-actions">
             <a href="/containers/{{.ID}}/logs" class="btn btn--ghost btn--sm">logs</a>
             {{if eq .State "running"}}
               {{if .IsSelf}}
-                <span class="label">protected</span>
+                <span class="badge badge--plain">protected</span>
               {{else}}
                 <form method="post" action="/containers/{{.ID}}/restart"><input type="hidden" name="csrf_token" value="{{$csrf}}"><button class="btn btn--ghost btn--sm">restart</button></form>
-                <form method="post" action="/containers/{{.ID}}/stop"><input type="hidden" name="csrf_token" value="{{$csrf}}"><button class="btn btn--ghost btn--sm">stop</button></form>
+                <form method="post" action="/containers/{{.ID}}/stop"><input type="hidden" name="csrf_token" value="{{$csrf}}"><button class="btn btn--danger btn--sm">stop</button></form>
               {{end}}
             {{else}}
               <form method="post" action="/containers/{{.ID}}/start"><input type="hidden" name="csrf_token" value="{{$csrf}}"><button class="btn btn--primary btn--sm">start</button></form>
@@ -47,10 +47,11 @@
         </td>
       </tr>
       {{else}}
-      <tr><td colspan="6">No containers.</td></tr>
+      <tr><td colspan="6"><div class="empty">No containers.</div></td></tr>
       {{end}}
     </tbody>
   </table>
-  <p class="label" style="margin-top:12px">Read-only in Phase 1. Start/stop/restart and live logs arrive in Phase 2.</p>
+  </div></div>
+  <p class="muted" style="margin-top:12px; font-size:0.82rem">Read-only listing with start / stop / restart. Live logs available per container.</p>
 {{end}}
 {{end}}

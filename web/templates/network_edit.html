@@ -1,42 +1,34 @@
 {{define "content"}}
 <div class="page-header">
-  <h1>Edit {{.Iface.Name}}</h1>
-  <a class="btn btn--ghost" href="/network">← Cancel</a>
+  <p class="muted" style="margin:0">{{.Iface.Type}}{{if .Iface.SSID}} · {{.Iface.SSID}}{{end}} · currently {{.Iface.State}}</p>
+  <a class="btn btn--ghost btn--sm" href="/network">← Cancel</a>
 </div>
-<p class="label">{{.Iface.Type}}{{if .Iface.SSID}} · {{.Iface.SSID}}{{end}} · currently {{.Iface.State}}</p>
 
 <div class="card" style="max-width:560px" x-data="{ method: '{{.Method}}' }">
-  <form method="post" action="/network/{{.Iface.Name}}/apply" class="auth-form" style="margin-top:0">
+  <form method="post" action="/network/{{.Iface.Name}}/apply" class="stack">
     <input type="hidden" name="csrf_token" value="{{.CSRF}}">
 
-    <label style="flex-direction:row; align-items:center; gap:8px">
-      <input type="radio" name="method" value="auto" x-model="method"> Automatic (DHCP)
-    </label>
-    <label style="flex-direction:row; align-items:center; gap:8px">
-      <input type="radio" name="method" value="manual" x-model="method"> Manual (static)
-    </label>
-
-    <div x-show="method === 'manual'" style="display:flex; flex-direction:column; gap:16px">
-      <label>IP address
-        <input type="text" name="address" value="{{.Address}}" placeholder="192.168.1.50">
-      </label>
-      <label>Prefix (CIDR)
-        <input type="number" name="prefix" value="{{.Prefix}}" min="1" max="32">
-      </label>
-      <label>Gateway
-        <input type="text" name="gateway" value="{{.Gateway}}" placeholder="192.168.1.1">
-      </label>
+    <div class="field">
+      <label>Addressing</label>
+      <div style="display:flex; gap:8px">
+        <label class="seg" :class="method==='auto' && 'seg--on'"><input type="radio" name="method" value="auto" x-model="method" hidden> Automatic (DHCP)</label>
+        <label class="seg" :class="method==='manual' && 'seg--on'"><input type="radio" name="method" value="manual" x-model="method" hidden> Manual (static)</label>
+      </div>
     </div>
 
-    <label>DNS servers <span class="label">(comma-separated)</span>
-      <input type="text" name="dns" value="{{.DNS}}" placeholder="1.1.1.1, 8.8.8.8">
-    </label>
-
-    <div class="badge badge--warn" style="padding:10px; border-radius:8px">
-      ⚠ After applying you have {{ printf "%d" 120 }} seconds to confirm from your browser,
-      or the change automatically reverts (anti-lockout).
+    <div x-show="method === 'manual'" class="stack">
+      <div class="field"><label>IP address</label><input type="text" name="address" value="{{.Address}}" placeholder="192.168.1.50"></div>
+      <div class="field"><label>Prefix (CIDR)</label><input type="number" name="prefix" value="{{.Prefix}}" min="1" max="32"></div>
+      <div class="field"><label>Gateway</label><input type="text" name="gateway" value="{{.Gateway}}" placeholder="192.168.1.1"></div>
     </div>
-    <button type="submit" class="btn btn--primary">Apply change</button>
+
+    <div class="field"><label>DNS servers <span class="hint">(comma-separated)</span></label><input type="text" name="dns" value="{{.DNS}}" placeholder="1.1.1.1, 8.8.8.8"></div>
+
+    <div class="callout callout--warn">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" style="flex:0 0 18px; margin-top:1px"><path d="M12 9v4m0 4h.01M10.3 3.9l-8 14A2 2 0 004 21h16a2 2 0 001.7-3.1l-8-14a2 2 0 00-3.4 0z"/></svg>
+      <div>After applying you have <strong>120&nbsp;seconds</strong> to confirm from your browser, or the change reverts automatically (anti-lockout).</div>
+    </div>
+    <div><button type="submit" class="btn btn--primary">Apply change</button></div>
   </form>
 </div>
 {{end}}

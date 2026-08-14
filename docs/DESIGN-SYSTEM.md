@@ -49,7 +49,7 @@ Built as `torizon-gateway-logo[-dark].svg`: the **official** Torizon mark + word
 
 ## 3. Typography
 
-- **Typeface: Inter** (Google Fonts). Weights: **Light 300**, **Regular 400**, **Bold 700**. Vendor the WOFF2 files locally under `web/static/vendor/inter/` (offline device — no Google Fonts CDN). Falls back to `system-ui`.
+- **Typeface: Inter** — vendored as a single **variable** WOFF2 (`web/static/vendor/inter/inter-latin-var.woff2`, latin subset, ~48 KB, weights 100–900) and `@font-face`'d in `tokens.css`. Offline-first (no Google Fonts CDN); falls back to `system-ui`.
 - **Body:** Regular 400, 18px / 1.125rem, line-height 1.5.
 - **Small:** 16px / 1rem.
 - **Headings:** Bold 700 with letter-spacing **-1px** for display/H1–H2; 0 for smaller headings.

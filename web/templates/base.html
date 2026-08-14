@@ -7,7 +7,6 @@
   <link rel="icon" href="/static/brand/torizon-avatar.svg">
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/app.css">
-  <!-- Vendored, embedded (no CDN). Vendored via `make vendor-ui`. -->
   <script src="/static/vendor/htmx.min.js" defer></script>
   <script src="/static/vendor/htmx-ext-sse.js" defer></script>
   <script src="/static/vendor/alpine.min.js" defer></script>
@@ -16,23 +15,49 @@
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
-        <img class="logo" src="/static/brand/torizon-gateway-logo-dark.svg" alt="Torizon Gateway">
+        <img src="/static/brand/torizon-gateway-logo-dark.svg" alt="Torizon Gateway">
       </div>
+      <div class="nav-label">Manage</div>
       <nav>
-        <a href="/"           class="{{if eq .Nav "dashboard"}}active{{end}}">Dashboard</a>
-        <a href="/network"    class="{{if eq .Nav "network"}}active{{end}}">Network</a>
-        <a href="/containers" class="{{if eq .Nav "containers"}}active{{end}}">Containers</a>
-        <a href="/updates"    class="{{if eq .Nav "updates"}}active{{end}}">Updates</a>
+        <a href="/" class="{{if eq .Nav "dashboard"}}active{{end}}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          Dashboard
+        </a>
+        <a href="/network" class="{{if eq .Nav "network"}}active{{end}}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"/></svg>
+          Network
+        </a>
+        <a href="/containers" class="{{if eq .Nav "containers"}}active{{end}}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+          Containers
+        </a>
+        <a href="/updates" class="{{if eq .Nav "updates"}}active{{end}}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          Updates
+        </a>
       </nav>
       <div class="sidebar-footer">
-        <span class="user">{{.User}}</span>
+        <div class="avatar">{{if .User}}{{slice .User 0 1}}{{else}}·{{end}}</div>
+        <div class="who">
+          <div class="name">{{.User}}</div>
+          <div class="role">Administrator</div>
+        </div>
         <form method="post" action="/logout">
           <input type="hidden" name="csrf_token" value="{{.CSRF}}">
-          <button type="submit" class="btn btn--ghost btn--sm">Sign out</button>
+          <button type="submit" class="icon-btn" title="Sign out" aria-label="Sign out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 12H4m0 0l4-4m-4 4l4 4"/><path d="M10 4h8a2 2 0 012 2v12a2 2 0 01-2 2h-8"/></svg>
+          </button>
         </form>
       </div>
     </aside>
     <main class="content">
+      <div class="topbar">
+        <div class="titles">
+          <div class="crumb">{{.Device}}</div>
+          <h1>{{.Title}}</h1>
+        </div>
+        <span class="device-chip"><span class="dot"></span><span class="muted">Online ·</span> <strong>zinnia.local</strong></span>
+      </div>
       {{template "content" .}}
     </main>
   </div>

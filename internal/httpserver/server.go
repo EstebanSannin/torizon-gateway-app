@@ -85,16 +85,23 @@ func (s *Server) routes() {
 }
 
 // layout holds fields every authenticated page needs (nav highlight, current
-// user, CSRF token for the logout form). Page data structs embed it.
+// user, CSRF token, device identity for the topbar). Page data structs embed it.
 type layout struct {
 	Title, Nav string
 	User       string
 	CSRF       string
+	Device     string // board model, shown in the topbar chip
 }
 
 // layoutFor builds the common layout fields for a protected page.
 func (s *Server) layoutFor(w http.ResponseWriter, r *http.Request, title, nav string) layout {
-	return layout{Title: title, Nav: nav, User: userFrom(r).Username, CSRF: s.ensureCSRF(w, r)}
+	return layout{
+		Title:  title,
+		Nav:    nav,
+		User:   userFrom(r).Username,
+		CSRF:   s.ensureCSRF(w, r),
+		Device: s.board.Model(),
+	}
 }
 
 // dashData is the template model for the dashboard.

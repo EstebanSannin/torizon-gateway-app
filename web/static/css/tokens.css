@@ -9,6 +9,15 @@
  *      Only semantic tokens are remapped for dark mode.
  */
 
+/* Inter — the Torizon brand typeface. Vendored (variable, latin) for offline use. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/static/vendor/inter/inter-latin-var.woff2") format("woff2");
+}
+
 :root {
   /* ---- 1. Raw brand palette (Torizon.io Colors) ---- */
 
@@ -61,20 +70,42 @@
   --tn-info:               var(--tn-primary-light);
 
   /* ---- 2. Semantic role tokens (LIGHT, default) ---- */
-  --color-bg:              var(--tn-lightest-gray);
+  --color-bg:              #EEF2F8; /* cool, calm console ground */
   --color-surface:         var(--tn-white);
-  --color-surface-alt:     var(--tn-light-gray);
-  --color-border:          #E2E8F0;
-  --color-text:            var(--tn-text-primary-dark);
-  --color-text-muted:      var(--tn-dark-gray);
+  --color-surface-alt:     #F5F8FC;
+  --color-border:          #E1E7F0;
+  --color-border-strong:   #CAD5E4;
+  --color-text:            #12233A;
+  --color-text-muted:      #5B6B80;
   --color-heading:         var(--tn-primary);
   --color-accent:          var(--tn-primary-light);
+  --color-accent-strong:   #0072D6;
+  --color-accent-soft:     var(--tn-light-blue);
   --color-accent-contrast: var(--tn-white);
   --color-brand:           var(--tn-primary);
   --color-highlight:       var(--tn-secondary);
+
+  /* Sidebar (deep navy with a subtle gradient) */
   --color-sidebar-bg:      var(--tn-primary);
-  --color-sidebar-text:    var(--tn-text-primary-light);
+  --color-sidebar-bg2:     #002B57;
+  --color-sidebar-text:    #A9BDD4;
   --color-sidebar-active:  var(--tn-primary-light);
+
+  /* Status soft backgrounds (for badges/tiles) */
+  --status-ok:       #1F8A54;
+  --status-ok-bg:    #E4F6EC;
+  --status-warn:     #B26A00;
+  --status-warn-bg:  #FFF3D6;
+  --status-danger:   #C62828;
+  --status-danger-bg:#FCE7E7;
+  --status-idle:     #64748B;
+  --status-idle-bg:  #EEF1F6;
+
+  /* Elevation + focus */
+  --shadow-sm:  0 1px 2px rgba(4, 24, 48, 0.06);
+  --shadow-md:  0 4px 16px rgba(4, 24, 48, 0.08);
+  --shadow-lg:  0 12px 32px rgba(4, 24, 48, 0.12);
+  --ring:       0 0 0 3px rgba(0, 146, 255, 0.28);
 
   /* ---- Typography (Torizon.io Typography = Inter) ---- */
   --font-family-base: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

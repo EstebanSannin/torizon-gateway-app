@@ -1,33 +1,30 @@
 {{define "content"}}
-<div class="page-header">
-  <h1>Updates</h1>
-</div>
-
-<h2>Currently installed</h2>
+<div class="section-title"><h2>Currently installed</h2><span class="rule"></span></div>
 <div class="grid">
-  <div class="card">
-    <div class="label">Torizon OS</div>
-    <div class="value" style="font-size:1.25rem">{{if .PrettyName}}{{.PrettyName}}{{else}}unknown{{end}}</div>
+  <div class="card tile">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></span><span class="label">Torizon OS</span></div>
+    <div class="value sm">{{if .PrettyName}}{{.PrettyName}}{{else}}unknown{{end}}</div>
   </div>
-  <div class="card">
-    <div class="label">Version</div>
-    <div class="value" style="font-size:1.25rem">{{if .VersionID}}{{.VersionID}}{{else}}—{{end}}</div>
+  <div class="card tile">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span><span class="label">Version</span></div>
+    <div class="value sm">{{if .VersionID}}{{.VersionID}}{{else}}—{{end}}</div>
   </div>
-  <div class="card">
-    <div class="label">Variant</div>
-    <div class="value" style="font-size:1.25rem">{{if .Variant}}{{.Variant}}{{else}}—{{end}}</div>
+  <div class="card tile">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/></svg></span><span class="label">Variant</span></div>
+    <div class="value sm">{{if .Variant}}{{.Variant}}{{else}}—{{end}}</div>
   </div>
-  <div class="card">
-    <div class="label">Codename</div>
-    <div class="value" style="font-size:1.25rem">{{if .Codename}}{{.Codename}}{{else}}—{{end}}</div>
+  <div class="card tile">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7l8-4 8 4-8 4-8-4zM4 12l8 4 8-4M4 17l8 4 8-4"/></svg></span><span class="label">Codename</span></div>
+    <div class="value sm">{{if .Codename}}{{.Codename}}{{else}}—{{end}}</div>
   </div>
 </div>
 
-<h2 style="margin-top:32px">Offline updates</h2>
-<div class="card">
-  <p>Applying signed <strong>Torizon Secure Offline Updates</strong> (Lockbox) from USB or
-  upload is planned for <strong>Phase 3</strong>. Signature verification and rollback are
-  handled by the host update engine (<code>aktualizr-torizon</code>).</p>
-  <p class="label">See docs/ARCHITECTURE.md §8.4.</p>
+<div class="section-title"><h2>Offline updates</h2><span class="rule"></span></div>
+<div class="card stack">
+  <div class="callout callout--info">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" style="flex:0 0 18px; margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+    <div>Applying signed <strong>Torizon Secure Offline Updates</strong> (Lockbox) from USB or upload is planned for <strong>Phase&nbsp;3</strong>. Signature verification and rollback are handled by the host update engine (<code>aktualizr-torizon</code>).</div>
+  </div>
+  <p class="muted" style="margin:0; font-size:0.82rem">See docs/ARCHITECTURE.md §8.4.</p>
 </div>
 {{end}}
