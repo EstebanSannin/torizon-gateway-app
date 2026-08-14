@@ -37,3 +37,13 @@ func deviceTreeModelPath() string {
 		"/host/device-tree/model",             // explicit compose mount
 	)
 }
+
+// deviceTreeSerialPath resolves the device-tree "serial-number" node (Toradex
+// modules populate this with the module serial).
+func deviceTreeSerialPath() string {
+	return firstExisting(
+		"/proc/device-tree/serial-number",
+		"/sys/firmware/devicetree/base/serial-number",
+		"/host/device-tree/serial-number",
+	)
+}

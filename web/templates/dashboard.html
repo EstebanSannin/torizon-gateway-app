@@ -21,6 +21,11 @@
     <div class="label">Kernel</div>
     <div class="value" style="font-size:1.25rem">{{.Board.KernelVersion}}</div>
   </div>
+  <div class="card">
+    <div class="label">Data storage ({{.Disk.Path}})</div>
+    <div class="value" style="font-size:1.25rem">{{.DiskUsedHuman}} / {{.DiskTotalHuman}}</div>
+    <div class="label">{{printf "%.0f%% used" .Disk.UsedPct}}</div>
+  </div>
 </div>
 
 <h2 style="margin-top:32px">Live health</h2>

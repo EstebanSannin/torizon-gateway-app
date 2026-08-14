@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/toradex/torizon-gateway-app/internal/config"
+	"github.com/toradex/torizon-gateway-app/internal/containers"
 	"github.com/toradex/torizon-gateway-app/internal/hal"
 	"github.com/toradex/torizon-gateway-app/internal/httpserver"
 )
@@ -43,7 +44,8 @@ func main() {
 		log.Fatalf("tls setup: %v", err)
 	}
 
-	srv := httpserver.New(cfg, board)
+	cnt := containers.New(cfg.DockerSocket)
+	srv := httpserver.New(cfg, board, cnt)
 	httpSrv := &http.Server{
 		Addr:              cfg.ListenAddr,
 		Handler:           srv.Handler(),

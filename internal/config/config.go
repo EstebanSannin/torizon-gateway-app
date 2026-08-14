@@ -19,6 +19,8 @@ type Config struct {
 	TLSKeyFile  string
 	// Hostname advertised via mDNS, e.g. "zinnia".
 	Hostname string
+	// DockerSocket is the path to the Docker engine socket (container management).
+	DockerSocket string
 	// DevMode relaxes some behavior for local development (never in production).
 	DevMode bool
 }
@@ -27,12 +29,13 @@ type Config struct {
 func Load() Config {
 	dataDir := env("GATEWAY_DATA_DIR", "/data")
 	return Config{
-		ListenAddr:  env("GATEWAY_LISTEN_ADDR", ":8443"),
-		DataDir:     dataDir,
-		TLSCertFile: env("GATEWAY_TLS_CERT", filepath.Join(dataDir, "tls", "cert.pem")),
-		TLSKeyFile:  env("GATEWAY_TLS_KEY", filepath.Join(dataDir, "tls", "key.pem")),
-		Hostname:    env("GATEWAY_HOSTNAME", "zinnia"),
-		DevMode:     env("GATEWAY_DEV_MODE", "") == "1",
+		ListenAddr:   env("GATEWAY_LISTEN_ADDR", ":8443"),
+		DataDir:      dataDir,
+		TLSCertFile:  env("GATEWAY_TLS_CERT", filepath.Join(dataDir, "tls", "cert.pem")),
+		TLSKeyFile:   env("GATEWAY_TLS_KEY", filepath.Join(dataDir, "tls", "key.pem")),
+		Hostname:     env("GATEWAY_HOSTNAME", "zinnia"),
+		DockerSocket: env("GATEWAY_DOCKER_SOCKET", "/var/run/docker.sock"),
+		DevMode:      env("GATEWAY_DEV_MODE", "") == "1",
 	}
 }
 

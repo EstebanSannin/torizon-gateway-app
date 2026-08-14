@@ -26,6 +26,10 @@ func (g *generic) Model() string {
 }
 
 func (g *generic) SerialNumber() string {
+	// Prefer the device-tree serial (ARM SoMs); fall back to DMI (x86).
+	if v := firstLine(deviceTreeSerialPath()); v != "" {
+		return strings.TrimRight(v, "\x00")
+	}
 	return strings.TrimRight(firstLine("/sys/devices/virtual/dmi/id/product_serial"), "\x00")
 }
 
