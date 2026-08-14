@@ -124,6 +124,7 @@ The app needs to *read* host state and *mutate* network + containers + updates. 
 - **D-Bus access is proxied/filtered.** Rather than raw access to the whole system bus, we front NetworkManager with a **D-Bus filter** (allow-list of NM interfaces/methods) so a compromised UI can't reach unrelated services. *(Open decision 16.2: `dbus-proxy` sidecar vs. an in-process allow-list.)*
 - **Docker socket exposure is acknowledged as the biggest risk.** The socket grants root-equivalent power on the host. Mitigations: run the container's own process as non-root where possible, keep the API surface we call minimal and validated, and treat "container management" write actions as privileged operations gated behind auth + audit. *(Open decision 16.3: consider a thin socket-proxy that allow-lists only the Docker endpoints we use.)*
 - **All state-changing actions are audited** (who, what, when) to the local store.
+- **Docker socket access from a non-root container:** the socket is `root:docker`, so the container process must be in the host's `docker` group. On-device we run the container as the device user and add the host docker GID via compose `group_add` (validated on Torizon: gid 990). The socket-proxy backlog item would remove this exposure.
 
 ### compose sketch
 ```yaml
@@ -315,8 +316,8 @@ torizon-gateway-app/
 **Phase 0 — skeleton**
 Container + Go server + embedded HTMX UI + HTTPS + first-boot auth + mDNS. "Hello, secured dashboard."
 
-**Phase 1 — read-only visibility (lowest risk, fast value)**
-System/board info dashboard (HAL) · container **list + logs** (read-only) · **current OS/update version** display.
+**Phase 1 — read-only visibility (lowest risk, fast value)** — _in progress_
+System/board info dashboard (HAL) — ✅ incl. serial (device-tree) + data storage · container **list** (read-only) — ✅ via a minimal stdlib Docker socket client · container **logs** — ⏳ next · **current OS version** — ✅ (update version display ⏳) · host **network interfaces** — moved to Phase 2 (a bridged container can't see the host netns; do it via NetworkManager/D-Bus).
 
 **Phase 2 — safe mutations**
 Network configuration with confirm-or-revert anti-lockout · container start/stop/restart · audit log.
