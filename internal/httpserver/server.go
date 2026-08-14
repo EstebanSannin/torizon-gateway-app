@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/toradex/torizon-gateway-app/internal/auth"
@@ -27,13 +28,17 @@ type Server struct {
 	auth       *auth.Service
 	store      *store.Store
 	mux        *http.ServeMux
+
+	pendMu  sync.Mutex
+	pending map[string]pendingChange // token → pending network change
 }
 
 // New builds the server and registers routes.
 func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, net *network.Service, a *auth.Service, st *store.Store) *Server {
 	s := &Server{
 		cfg: cfg, board: board, containers: cnt, network: net, auth: a, store: st,
-		mux: http.NewServeMux(),
+		mux:     http.NewServeMux(),
+		pending: make(map[string]pendingChange),
 	}
 	s.routes()
 	return s
@@ -63,6 +68,10 @@ func (s *Server) routes() {
 	// Pages (protected).
 	s.mux.HandleFunc("GET /{$}", s.requireAuth(s.handleDashboard))
 	s.mux.HandleFunc("GET /network", s.requireAuth(s.handleNetwork))
+	s.mux.HandleFunc("GET /network/{iface}/edit", s.requireAuth(s.handleNetworkEdit))
+	s.mux.HandleFunc("POST /network/{iface}/apply", s.requireAuth(s.handleNetworkApply))
+	s.mux.HandleFunc("POST /network/confirm", s.requireAuth(s.handleNetworkConfirm))
+	s.mux.HandleFunc("POST /network/cancel", s.requireAuth(s.handleNetworkCancel))
 	s.mux.HandleFunc("GET /containers", s.requireAuth(s.handleContainers))
 	s.mux.HandleFunc("GET /containers/{id}/logs", s.requireAuth(s.handleContainerLogsPage))
 	s.mux.HandleFunc("GET /updates", s.requireAuth(s.handleUpdates))

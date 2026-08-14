@@ -30,6 +30,7 @@ import (
 
 func main() {
 	healthcheck := flag.Bool("healthcheck", false, "probe the local server and exit 0 (healthy) or 1")
+	nmWriteTest := flag.Bool("nmwrite-selftest", false, "test whether NetworkManager writes are permitted (polkit), then exit")
 	flag.Parse()
 
 	cfg := config.Load()
@@ -37,6 +38,16 @@ func main() {
 	// Container HEALTHCHECK entrypoint: hit our own /healthz and exit.
 	if *healthcheck {
 		os.Exit(runHealthcheck(cfg.ListenAddr))
+	}
+
+	// One-off diagnostic: can we write to NetworkManager from here (polkit)?
+	if *nmWriteTest {
+		if err := network.New(cfg.DBusSocket).WriteProbe(); err != nil {
+			log.Printf("NM write NOT permitted: %v", err)
+			os.Exit(1)
+		}
+		log.Println("NM write permitted (checkpoint create/destroy succeeded)")
+		os.Exit(0)
 	}
 	board := hal.Detect()
 	log.Printf("torizon-gateway starting: board=%s model=%q os=%q",

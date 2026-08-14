@@ -1,0 +1,42 @@
+{{define "content"}}
+<div class="page-header">
+  <h1>Edit {{.Iface.Name}}</h1>
+  <a class="btn btn--ghost" href="/network">← Cancel</a>
+</div>
+<p class="label">{{.Iface.Type}}{{if .Iface.SSID}} · {{.Iface.SSID}}{{end}} · currently {{.Iface.State}}</p>
+
+<div class="card" style="max-width:560px" x-data="{ method: '{{.Method}}' }">
+  <form method="post" action="/network/{{.Iface.Name}}/apply" class="auth-form" style="margin-top:0">
+    <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+
+    <label style="flex-direction:row; align-items:center; gap:8px">
+      <input type="radio" name="method" value="auto" x-model="method"> Automatic (DHCP)
+    </label>
+    <label style="flex-direction:row; align-items:center; gap:8px">
+      <input type="radio" name="method" value="manual" x-model="method"> Manual (static)
+    </label>
+
+    <div x-show="method === 'manual'" style="display:flex; flex-direction:column; gap:16px">
+      <label>IP address
+        <input type="text" name="address" value="{{.Address}}" placeholder="192.168.1.50">
+      </label>
+      <label>Prefix (CIDR)
+        <input type="number" name="prefix" value="{{.Prefix}}" min="1" max="32">
+      </label>
+      <label>Gateway
+        <input type="text" name="gateway" value="{{.Gateway}}" placeholder="192.168.1.1">
+      </label>
+    </div>
+
+    <label>DNS servers <span class="label">(comma-separated)</span>
+      <input type="text" name="dns" value="{{.DNS}}" placeholder="1.1.1.1, 8.8.8.8">
+    </label>
+
+    <div class="badge badge--warn" style="padding:10px; border-radius:8px">
+      ⚠ After applying you have {{ printf "%d" 120 }} seconds to confirm from your browser,
+      or the change automatically reverts (anti-lockout).
+    </div>
+    <button type="submit" class="btn btn--primary">Apply change</button>
+  </form>
+</div>
+{{end}}

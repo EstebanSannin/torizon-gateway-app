@@ -20,6 +20,7 @@
         {{if eq .State "Connected"}}<span class="badge badge--running">{{.State}}</span>
         {{else}}<span class="badge badge--stopped">{{.State}}</span>{{end}}
       </div>
+      <p style="margin:0 0 12px"><a href="/network/{{.Name}}/edit">Edit IPv4 →</a></p>
       <table>
         <tr><th>Type</th><td>{{.Type}}{{if .SSID}} · {{.SSID}}{{end}}</td></tr>
         <tr><th>Method</th><td>{{.Method}}</td></tr>
@@ -32,6 +33,6 @@
     </div>
     {{end}}
   </div>
-  <p class="label" style="margin-top:12px">Read-only. Editing (with confirm-or-revert anti-lockout) is next in Phase 2.</p>
+  <p class="label" style="margin-top:12px">Use “Edit IPv4” to change an interface. Changes apply behind a confirm-or-revert window (anti-lockout).</p>
 {{end}}
 {{end}}
