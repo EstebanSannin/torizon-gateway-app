@@ -316,8 +316,8 @@ torizon-gateway-app/
 **Phase 0 — skeleton**
 Container + Go server + embedded HTMX UI + HTTPS + first-boot auth + mDNS. "Hello, secured dashboard."
 
-**Phase 1 — read-only visibility (lowest risk, fast value)** — _in progress_
-System/board info dashboard (HAL) — ✅ incl. serial (device-tree) + data storage · container **list** (read-only) — ✅ via a minimal stdlib Docker socket client · container **logs** — ⏳ next · **current OS version** — ✅ (update version display ⏳) · host **network interfaces** — moved to Phase 2 (a bridged container can't see the host netns; do it via NetworkManager/D-Bus).
+**Phase 1 — read-only visibility (lowest risk, fast value)** — ✅ _complete_
+System/board info dashboard (HAL) incl. serial (device-tree) + data storage · container **list** (read-only) via a minimal stdlib Docker socket client · container **logs** (live SSE tail) · **Updates** page with current OS version. Host **network interfaces** intentionally moved to Phase 2 (a bridged container can't see the host netns; done properly via NetworkManager/D-Bus). All validated on a Verdin iMX8M Plus (Torizon OS 7.7.0).
 
 **Phase 2 — safe mutations**
 Network configuration with confirm-or-revert anti-lockout · container start/stop/restart · audit log.
