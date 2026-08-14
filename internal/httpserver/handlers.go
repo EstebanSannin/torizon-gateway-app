@@ -12,9 +12,12 @@ import (
 
 // handleContainerLogsPage renders the live-log viewer for one container.
 func (s *Server) handleContainerLogsPage(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	render(w, "logs.html", map[string]any{
-		"Title": "Logs", "Nav": "containers", "ID": id,
+	render(w, "logs.html", struct {
+		layout
+		ID string
+	}{
+		layout: s.layoutFor(w, r, "Logs", "containers"),
+		ID:     r.PathValue("id"),
 	})
 }
 
@@ -58,7 +61,7 @@ func (s *Server) handleContainerLogsSSE(w http.ResponseWriter, r *http.Request) 
 
 // updatesData is the template model for the read-only Updates view.
 type updatesData struct {
-	Title, Nav string
+	layout
 	PrettyName string
 	VersionID  string
 	Variant    string
@@ -70,7 +73,7 @@ type updatesData struct {
 func (s *Server) handleUpdates(w http.ResponseWriter, r *http.Request) {
 	osr := hal.OSRelease()
 	render(w, "updates.html", updatesData{
-		Title: "Updates", Nav: "updates",
+		layout:     s.layoutFor(w, r, "Updates", "updates"),
 		PrettyName: osr["PRETTY_NAME"],
 		VersionID:  osr["VERSION_ID"],
 		Variant:    osr["VARIANT"],

@@ -1,0 +1,19 @@
+{{define "authbase"}}<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · Torizon Gateway</title>
+  <link rel="icon" href="/static/brand/torizon-avatar.svg">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <img class="auth-logo" src="/static/brand/torizon-gateway-logo.svg" alt="Torizon Gateway">
+      {{template "authcontent" .}}
+    </div>
+  </div>
+</body>
+</html>{{end}}

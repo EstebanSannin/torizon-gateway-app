@@ -6,6 +6,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // Config holds all app configuration. Populate with Load().
@@ -21,6 +22,8 @@ type Config struct {
 	Hostname string
 	// DockerSocket is the path to the Docker engine socket (container management).
 	DockerSocket string
+	// SessionTTL is how long a login session stays valid.
+	SessionTTL time.Duration
 	// DevMode relaxes some behavior for local development (never in production).
 	DevMode bool
 }
@@ -35,6 +38,7 @@ func Load() Config {
 		TLSKeyFile:   env("GATEWAY_TLS_KEY", filepath.Join(dataDir, "tls", "key.pem")),
 		Hostname:     env("GATEWAY_HOSTNAME", "zinnia"),
 		DockerSocket: env("GATEWAY_DOCKER_SOCKET", "/var/run/docker.sock"),
+		SessionTTL:   envDuration("GATEWAY_SESSION_TTL", 24*time.Hour),
 		DevMode:      env("GATEWAY_DEV_MODE", "") == "1",
 	}
 }
@@ -42,6 +46,15 @@ func Load() Config {
 func env(key, def string) string {
 	if v, ok := os.LookupEnv(key); ok {
 		return v
+	}
+	return def
+}
+
+func envDuration(key string, def time.Duration) time.Duration {
+	if v, ok := os.LookupEnv(key); ok {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
+		}
 	}
 	return def
 }

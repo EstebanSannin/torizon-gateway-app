@@ -19,10 +19,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/toradex/torizon-gateway-app/internal/auth"
 	"github.com/toradex/torizon-gateway-app/internal/config"
 	"github.com/toradex/torizon-gateway-app/internal/containers"
 	"github.com/toradex/torizon-gateway-app/internal/hal"
 	"github.com/toradex/torizon-gateway-app/internal/httpserver"
+	"github.com/toradex/torizon-gateway-app/internal/store"
 )
 
 func main() {
@@ -44,8 +46,15 @@ func main() {
 		log.Fatalf("tls setup: %v", err)
 	}
 
+	st, err := store.Open(cfg.DataDir)
+	if err != nil {
+		log.Fatalf("store: %v", err)
+	}
+	defer st.Close()
+
+	authSvc := auth.New(st, cfg.SessionTTL)
 	cnt := containers.New(cfg.DockerSocket)
-	srv := httpserver.New(cfg, board, cnt)
+	srv := httpserver.New(cfg, board, cnt, authSvc, st)
 	httpSrv := &http.Server{
 		Addr:              cfg.ListenAddr,
 		Handler:           srv.Handler(),

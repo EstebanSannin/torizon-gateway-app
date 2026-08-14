@@ -24,6 +24,13 @@
         <a href="/containers" class="{{if eq .Nav "containers"}}active{{end}}">Containers</a>
         <a href="/updates"    class="{{if eq .Nav "updates"}}active{{end}}">Updates</a>
       </nav>
+      <div class="sidebar-footer">
+        <span class="user">{{.User}}</span>
+        <form method="post" action="/logout">
+          <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+          <button type="submit" class="btn btn--ghost btn--sm">Sign out</button>
+        </form>
+      </div>
     </aside>
     <main class="content">
       {{template "content" .}}

@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/toradex/torizon-gateway-app/internal/auth"
 	"github.com/toradex/torizon-gateway-app/internal/config"
 	"github.com/toradex/torizon-gateway-app/internal/containers"
 	"github.com/toradex/torizon-gateway-app/internal/hal"
+	"github.com/toradex/torizon-gateway-app/internal/store"
 	"github.com/toradex/torizon-gateway-app/internal/sysinfo"
 	"github.com/toradex/torizon-gateway-app/web"
 )
@@ -20,12 +22,17 @@ type Server struct {
 	cfg        config.Config
 	board      hal.BoardInfo
 	containers *containers.Service
+	auth       *auth.Service
+	store      *store.Store
 	mux        *http.ServeMux
 }
 
 // New builds the server and registers routes.
-func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service) *Server {
-	s := &Server{cfg: cfg, board: board, containers: cnt, mux: http.NewServeMux()}
+func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, a *auth.Service, st *store.Store) *Server {
+	s := &Server{
+		cfg: cfg, board: board, containers: cnt, auth: a, store: st,
+		mux: http.NewServeMux(),
+	}
 	s.routes()
 	return s
 }
@@ -38,27 +45,47 @@ func (s *Server) routes() {
 	staticFS, _ := fs.Sub(web.Static, "static")
 	s.mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
-	// Health probe (for Docker/compose healthcheck).
+	// Health probe (for Docker/compose healthcheck) — public.
 	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
 
-	// Pages.
-	s.mux.HandleFunc("GET /{$}", s.handleDashboard)
-	s.mux.HandleFunc("GET /network", s.placeholder("network", "Network"))
-	s.mux.HandleFunc("GET /containers", s.handleContainers)
-	s.mux.HandleFunc("GET /containers/{id}/logs", s.handleContainerLogsPage)
-	s.mux.HandleFunc("GET /updates", s.handleUpdates)
+	// Auth (public) — first-boot setup, login, logout.
+	s.mux.HandleFunc("GET /setup", s.handleSetupPage)
+	s.mux.HandleFunc("POST /setup", s.handleSetupPost)
+	s.mux.HandleFunc("GET /login", s.handleLoginPage)
+	s.mux.HandleFunc("POST /login", s.handleLoginPost)
+	s.mux.HandleFunc("POST /logout", s.requireAuth(s.handleLogout))
 
-	// Live streams (SSE).
-	s.mux.HandleFunc("GET /sse/metrics", s.handleMetricsSSE)
-	s.mux.HandleFunc("GET /sse/logs/{id}", s.handleContainerLogsSSE)
+	// Pages (protected).
+	s.mux.HandleFunc("GET /{$}", s.requireAuth(s.handleDashboard))
+	s.mux.HandleFunc("GET /network", s.requireAuth(s.placeholder("network", "Network")))
+	s.mux.HandleFunc("GET /containers", s.requireAuth(s.handleContainers))
+	s.mux.HandleFunc("GET /containers/{id}/logs", s.requireAuth(s.handleContainerLogsPage))
+	s.mux.HandleFunc("GET /updates", s.requireAuth(s.handleUpdates))
+
+	// Live streams (SSE) — protected.
+	s.mux.HandleFunc("GET /sse/metrics", s.requireAuth(s.handleMetricsSSE))
+	s.mux.HandleFunc("GET /sse/logs/{id}", s.requireAuth(s.handleContainerLogsSSE))
+}
+
+// layout holds fields every authenticated page needs (nav highlight, current
+// user, CSRF token for the logout form). Page data structs embed it.
+type layout struct {
+	Title, Nav string
+	User       string
+	CSRF       string
+}
+
+// layoutFor builds the common layout fields for a protected page.
+func (s *Server) layoutFor(w http.ResponseWriter, r *http.Request, title, nav string) layout {
+	return layout{Title: title, Nav: nav, User: userFrom(r).Username, CSRF: s.ensureCSRF(w, r)}
 }
 
 // dashData is the template model for the dashboard.
 type dashData struct {
-	Title, Nav     string
+	layout
 	Board          hal.BoardInfo
 	Metrics        hal.Metrics
 	MemUsedHuman   string
@@ -74,8 +101,9 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	// host bind mount (as it is on-device).
 	disk, _ := sysinfo.DiskUsage(s.cfg.DataDir)
 	data := dashData{
-		Title: "Dashboard", Nav: "dashboard",
-		Board: s.board, Metrics: m,
+		layout:         s.layoutFor(w, r, "Dashboard", "dashboard"),
+		Board:          s.board,
+		Metrics:        m,
 		MemUsedHuman:   humanBytes(m.MemUsedBytes),
 		UptimeHuman:    humanDuration(m.UptimeSeconds),
 		Disk:           disk,
@@ -87,7 +115,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 // containersData is the template model for the container list.
 type containersData struct {
-	Title, Nav string
+	layout
 	Available  bool
 	Containers []containers.Container
 	Err        string
@@ -95,7 +123,7 @@ type containersData struct {
 
 func (s *Server) handleContainers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	data := containersData{Title: "Containers", Nav: "containers"}
+	data := containersData{layout: s.layoutFor(w, r, "Containers", "containers")}
 	if s.containers == nil || !s.containers.Available(ctx) {
 		data.Available = false
 		render(w, "containers.html", data)
@@ -117,7 +145,7 @@ func (s *Server) placeholder(nav, title string) http.HandlerFunc {
 		<div class="card"><p>This section is part of the roadmap and not yet implemented.</p>
 		<p class="label">See docs/ARCHITECTURE.md for the plan.</p></div>{{end}}`
 	return func(w http.ResponseWriter, r *http.Request) {
-		renderInline(w, content, map[string]any{"Title": title, "Nav": nav})
+		renderInline(w, content, s.layoutFor(w, r, title, nav))
 	}
 }
 

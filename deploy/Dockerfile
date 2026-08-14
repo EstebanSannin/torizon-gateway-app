@@ -3,14 +3,13 @@
 # Build:  docker buildx build --platform linux/arm64,linux/amd64 -f deploy/Dockerfile -t torizon-gateway .
 
 # ---- Build stage ----
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /src
 # Cache modules first.
-COPY go.mod ./
-# COPY go.sum ./   # add once external deps land
-RUN go mod download || true
+COPY go.mod go.sum ./
+RUN go mod download
 # App sources (UI is embedded via //go:embed, so web/ must be present at build).
 COPY . .
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
