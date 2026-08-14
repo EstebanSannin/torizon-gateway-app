@@ -1,0 +1,17 @@
+# Binaries
+/bin/
+gateway-manager
+
+# Local dev data (SQLite DB, generated TLS cert)
+/.localdata/
+
+# Go
+*.test
+*.out
+/vendor/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
