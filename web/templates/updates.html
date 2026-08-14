@@ -1,0 +1,33 @@
+{{define "content"}}
+<div class="page-header">
+  <h1>Updates</h1>
+</div>
+
+<h2>Currently installed</h2>
+<div class="grid">
+  <div class="card">
+    <div class="label">Torizon OS</div>
+    <div class="value" style="font-size:1.25rem">{{if .PrettyName}}{{.PrettyName}}{{else}}unknown{{end}}</div>
+  </div>
+  <div class="card">
+    <div class="label">Version</div>
+    <div class="value" style="font-size:1.25rem">{{if .VersionID}}{{.VersionID}}{{else}}—{{end}}</div>
+  </div>
+  <div class="card">
+    <div class="label">Variant</div>
+    <div class="value" style="font-size:1.25rem">{{if .Variant}}{{.Variant}}{{else}}—{{end}}</div>
+  </div>
+  <div class="card">
+    <div class="label">Codename</div>
+    <div class="value" style="font-size:1.25rem">{{if .Codename}}{{.Codename}}{{else}}—{{end}}</div>
+  </div>
+</div>
+
+<h2 style="margin-top:32px">Offline updates</h2>
+<div class="card">
+  <p>Applying signed <strong>Torizon Secure Offline Updates</strong> (Lockbox) from USB or
+  upload is planned for <strong>Phase 3</strong>. Signature verification and rollback are
+  handled by the host update engine (<code>aktualizr-torizon</code>).</p>
+  <p class="label">See docs/ARCHITECTURE.md §8.4.</p>
+</div>
+{{end}}

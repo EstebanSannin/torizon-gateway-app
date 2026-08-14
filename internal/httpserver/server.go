@@ -48,10 +48,12 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /{$}", s.handleDashboard)
 	s.mux.HandleFunc("GET /network", s.placeholder("network", "Network"))
 	s.mux.HandleFunc("GET /containers", s.handleContainers)
-	s.mux.HandleFunc("GET /updates", s.placeholder("updates", "Updates"))
+	s.mux.HandleFunc("GET /containers/{id}/logs", s.handleContainerLogsPage)
+	s.mux.HandleFunc("GET /updates", s.handleUpdates)
 
-	// Live metrics stream (SSE) — stub emits a snapshot every 3s.
+	// Live streams (SSE).
 	s.mux.HandleFunc("GET /sse/metrics", s.handleMetricsSSE)
+	s.mux.HandleFunc("GET /sse/logs/{id}", s.handleContainerLogsSSE)
 }
 
 // dashData is the template model for the dashboard.

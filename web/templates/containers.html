@@ -15,7 +15,7 @@
   {{if .Err}}<div class="card"><p class="badge badge--error">Error: {{.Err}}</p></div>{{end}}
   <table>
     <thead>
-      <tr><th>Name</th><th>Image</th><th>State</th><th>Status</th><th>Ports</th></tr>
+      <tr><th>Name</th><th>Image</th><th>State</th><th>Status</th><th>Ports</th><th></th></tr>
     </thead>
     <tbody>
       {{range .Containers}}
@@ -29,9 +29,10 @@
         </td>
         <td>{{.Status}}</td>
         <td>{{range .Ports}}<div>{{.}}</div>{{else}}—{{end}}</td>
+        <td><a href="/containers/{{.ID}}/logs">logs</a></td>
       </tr>
       {{else}}
-      <tr><td colspan="5">No containers.</td></tr>
+      <tr><td colspan="6">No containers.</td></tr>
       {{end}}
     </tbody>
   </table>

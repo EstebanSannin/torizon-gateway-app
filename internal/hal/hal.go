@@ -30,6 +30,13 @@ type Metrics struct {
 	SoCTempCelsius float64 // 0 if no sensor found
 }
 
+// OSRelease returns the parsed host os-release key/values (Torizon OS on the
+// device; the container's own when the /host mount is absent). Used by the
+// updates view to show the currently installed version.
+func OSRelease() map[string]string {
+	return parseKeyVals(osReleasePath())
+}
+
 // Detect selects the best implementation for the current hardware.
 // Probe order: Toradex signature first, generic fallback last.
 func Detect() BoardInfo {

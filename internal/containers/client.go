@@ -17,23 +17,28 @@ import (
 // binary small on constrained hardware. Read-only for Phase 1.
 type Service struct {
 	socketPath string
-	http       *http.Client
-	selfHost   string // our own container's hostname (short id) for self-detection
+	http       *http.Client // short requests (list/ping/inspect)
+	stream     *http.Client // long-lived (log follow) — no client timeout
+	selfHost   string       // our own container's hostname (short id) for self-detection
 }
 
 // New builds a Service for the given Docker socket path.
 func New(socketPath string) *Service {
 	host, _ := os.Hostname()
+	dial := func(ctx context.Context, _, _ string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, "unix", socketPath)
+	}
 	return &Service{
 		socketPath: socketPath,
 		selfHost:   host,
 		http: &http.Client{
-			Timeout: 5 * time.Second,
-			Transport: &http.Transport{
-				DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-					return (&net.Dialer{}).DialContext(ctx, "unix", socketPath)
-				},
-			},
+			Timeout:   5 * time.Second,
+			Transport: &http.Transport{DialContext: dial},
+		},
+		// No Timeout: log follow is long-lived; cancellation is via context /
+		// closing the response body.
+		stream: &http.Client{
+			Transport: &http.Transport{DialContext: dial},
 		},
 	}
 }

@@ -1,0 +1,13 @@
+{{define "content"}}
+<div class="page-header">
+  <h1>Container logs</h1>
+  <a class="btn btn--ghost" href="/containers">← Back to containers</a>
+</div>
+<p class="label">Streaming stdout/stderr for <code>{{.ID}}</code> (last 200 lines, then live).</p>
+
+<pre id="logs" class="logbox"
+     hx-ext="sse"
+     sse-connect="/sse/logs/{{.ID}}"
+     sse-swap="line"
+     hx-swap="beforeend scroll:bottom"></pre>
+{{end}}
