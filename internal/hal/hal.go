@@ -44,8 +44,8 @@ func Detect() BoardInfo {
 func isToradex() bool {
 	// Toradex modules expose a compatible/vendor string in the device tree.
 	// Presence of the Toradex model node is a good-enough capability probe.
-	if _, err := os.Stat("/proc/device-tree/model"); err == nil {
-		if b, err := os.ReadFile("/proc/device-tree/model"); err == nil {
+	if path := deviceTreeModelPath(); path != "" {
+		if b, err := os.ReadFile(path); err == nil {
 			return containsFold(string(b), "toradex") || containsFold(string(b), "verdin") ||
 				containsFold(string(b), "apalis") || containsFold(string(b), "colibri")
 		}

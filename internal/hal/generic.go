@@ -16,7 +16,7 @@ func newGeneric() BoardInfo { return &generic{} }
 func (g *generic) Kind() string { return "generic" }
 
 func (g *generic) Model() string {
-	if v := firstLine("/proc/device-tree/model"); v != "" {
+	if v := firstLine(deviceTreeModelPath()); v != "" {
 		return strings.TrimRight(v, "\x00")
 	}
 	if v := firstLine("/sys/devices/virtual/dmi/id/product_name"); v != "" {
@@ -30,7 +30,7 @@ func (g *generic) SerialNumber() string {
 }
 
 func (g *generic) OSVersion() string {
-	m := parseKeyVals("/etc/os-release")
+	m := parseKeyVals(osReleasePath())
 	if v := m["PRETTY_NAME"]; v != "" {
 		return v
 	}

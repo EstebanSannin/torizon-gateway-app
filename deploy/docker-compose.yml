@@ -29,10 +29,11 @@ services:
       # App-owned persistent state (SQLite DB, TLS cert).
       - gateway-data:/data
     healthcheck:
-      test: ["CMD", "/usr/local/bin/gateway-manager", "-healthcheck"]  # TODO: implement flag
+      test: ["CMD", "/usr/local/bin/gateway-manager", "-healthcheck"]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 10s
 
 volumes:
   gateway-data:

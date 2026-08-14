@@ -1,0 +1,10 @@
+# Keep the build context small. The UI IS needed (embedded), so web/ stays.
+.git
+.gitignore
+.localdata
+bin
+docs
+test
+README.md
+CLAUDE.md
+*.md
