@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -24,13 +25,12 @@ type Service struct {
 
 // New builds a Service for the given Docker socket path.
 func New(socketPath string) *Service {
-	host, _ := os.Hostname()
 	dial := func(ctx context.Context, _, _ string) (net.Conn, error) {
 		return (&net.Dialer{}).DialContext(ctx, "unix", socketPath)
 	}
 	return &Service{
 		socketPath: socketPath,
-		selfHost:   host,
+		selfHost:   detectSelfID(),
 		http: &http.Client{
 			Timeout:   5 * time.Second,
 			Transport: &http.Transport{DialContext: dial},
@@ -122,6 +122,28 @@ func (s *Service) List(ctx context.Context) ([]Container, error) {
 // newRequest builds a request against the socket (host is ignored for unix).
 func (s *Service) newRequest(ctx context.Context, path string) (*http.Request, error) {
 	return http.NewRequestWithContext(ctx, http.MethodGet, "http://docker"+path, nil)
+}
+
+// detectSelfID finds this process's own container ID so IsSelf works regardless
+// of networking mode. With host networking the hostname is the HOST's name (not
+// the container's short id), so we read the 64-hex id from /proc/self/mountinfo
+// (docker bind-mounts .../containers/<id>/hostname etc.), then /proc/self/cgroup,
+// and finally fall back to the hostname.
+func detectSelfID() string {
+	reHex := regexp.MustCompile(`[0-9a-f]{64}`)
+	for _, p := range []string{"/proc/self/mountinfo", "/proc/self/cgroup"} {
+		if b, err := os.ReadFile(p); err == nil {
+			for _, line := range strings.Split(string(b), "\n") {
+				if strings.Contains(line, "docker") || strings.Contains(line, "containers") {
+					if m := reHex.FindString(line); m != "" {
+						return m
+					}
+				}
+			}
+		}
+	}
+	h, _ := os.Hostname()
+	return h
 }
 
 func shortID(id string) string {

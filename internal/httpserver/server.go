@@ -21,13 +21,14 @@ import (
 
 // Server holds shared dependencies for handlers.
 type Server struct {
-	cfg        config.Config
-	board      hal.BoardInfo
-	containers *containers.Service
-	network    *network.Service
-	auth       *auth.Service
-	store      *store.Store
-	mux        *http.ServeMux
+	cfg         config.Config
+	board       hal.BoardInfo
+	containers  *containers.Service
+	network     *network.Service
+	auth        *auth.Service
+	store       *store.Store
+	peripherals *sysinfo.Peripherals
+	mux         *http.ServeMux
 
 	pendMu  sync.Mutex
 	pending map[string]pendingChange // token → pending network change
@@ -37,8 +38,9 @@ type Server struct {
 func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, net *network.Service, a *auth.Service, st *store.Store) *Server {
 	s := &Server{
 		cfg: cfg, board: board, containers: cnt, network: net, auth: a, store: st,
-		mux:     http.NewServeMux(),
-		pending: make(map[string]pendingChange),
+		peripherals: sysinfo.NewPeripherals(cfg.SysfsPath),
+		mux:         http.NewServeMux(),
+		pending:     make(map[string]pendingChange),
 	}
 	s.routes()
 	return s
@@ -78,6 +80,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /containers/{id}/stop", s.requireAuth(s.handleContainerAction("stop")))
 	s.mux.HandleFunc("POST /containers/{id}/restart", s.requireAuth(s.handleContainerAction("restart")))
 	s.mux.HandleFunc("GET /updates", s.requireAuth(s.handleUpdates))
+
+	// HTML fragments (htmx polling) — protected.
+	s.mux.HandleFunc("GET /fragment/peripherals", s.requireAuth(s.handlePeripheralsFragment))
 
 	// Live streams (SSE) — protected.
 	s.mux.HandleFunc("GET /sse/metrics", s.requireAuth(s.handleMetricsSSE))

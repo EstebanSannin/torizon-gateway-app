@@ -11,8 +11,10 @@ services:
     image: ${REGISTRY:-torizon}/gateway-manager:${TAG:-latest}
     container_name: torizon-gateway
     restart: unless-stopped
-    ports:
-      - "443:8443"          # HTTPS
+    # Host networking: required to see host interfaces such as CAN (can0/can1)
+    # in /sys/class/net, and it lets the self-signed cert auto-detect the real
+    # LAN IP. The app binds :8443 directly on the host (no port mapping).
+    network_mode: host
     environment:
       - GATEWAY_DATA_DIR=/data
       - GATEWAY_HOSTNAME=zinnia

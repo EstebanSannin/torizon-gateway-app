@@ -1,0 +1,49 @@
+{{define "peripherals"}}
+<div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+  <div class="card stack" style="gap:12px">
+    <div class="tile-head">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v10m0 0a2 2 0 100 4 2 2 0 000-4zM9 7l3-4 3 4M8 12h1m6 0h1"/></svg></span>
+      <span class="label">USB devices</span><span class="badge badge--plain">{{len .USB}}</span>
+    </div>
+    {{range .USB}}
+      <div style="display:flex; justify-content:space-between; gap:10px; border-top:1px solid var(--color-border); padding-top:8px">
+        <div>
+          <div style="font-weight:600">{{if .Product}}{{.Product}}{{else}}{{.VendorID}}:{{.ProductID}}{{end}}</div>
+          <div class="muted" style="font-size:0.78rem">{{if .Manufacturer}}{{.Manufacturer}} · {{end}}<span class="mono">{{.VendorID}}:{{.ProductID}}</span>{{if .Class}} · {{.Class}}{{end}}</div>
+        </div>
+        {{if .IsHub}}<span class="badge badge--idle">hub</span>{{else}}<span class="badge badge--ok">device</span>{{end}}
+      </div>
+    {{else}}<div class="muted" style="font-size:0.85rem">No USB devices.</div>{{end}}
+  </div>
+
+  <div class="card stack" style="gap:12px">
+    <div class="tile-head">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></span>
+      <span class="label">Storage &amp; removable media</span>
+    </div>
+    {{range .Block}}
+      <div style="display:flex; justify-content:space-between; gap:10px; border-top:1px solid var(--color-border); padding-top:8px">
+        <div>
+          <div style="font-weight:600"><span class="mono">{{.Name}}</span> · {{.SizeHuman}}{{if .Model}} · {{.Model}}{{end}}</div>
+          <div class="muted" style="font-size:0.78rem">{{if .Mountpoint}}mounted at {{.Mountpoint}}{{else}}not mounted{{end}}</div>
+        </div>
+        {{if and .Removable (eq .Transport "USB")}}<span class="badge badge--warn">USB stick</span>
+        {{else}}<span class="badge badge--plain">{{.Transport}}</span>{{end}}
+      </div>
+    {{else}}<div class="muted" style="font-size:0.85rem">No block devices.</div>{{end}}
+  </div>
+
+  <div class="card stack" style="gap:12px">
+    <div class="tile-head">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 12h4l2-3 4 6 2-3h4"/></svg></span>
+      <span class="label">CAN bus</span><span class="badge badge--plain">{{len .CAN}}</span>
+    </div>
+    {{range .CAN}}
+      <div style="display:flex; justify-content:space-between; gap:10px; border-top:1px solid var(--color-border); padding-top:8px">
+        <div style="font-weight:600"><span class="mono">{{.Name}}</span></div>
+        {{if eq .State "up"}}<span class="badge badge--running">up</span>{{else}}<span class="badge badge--stopped">{{if .State}}{{.State}}{{else}}down{{end}}</span>{{end}}
+      </div>
+    {{else}}<div class="muted" style="font-size:0.85rem">No CAN interfaces.</div>{{end}}
+  </div>
+</div>
+{{end}}

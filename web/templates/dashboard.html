@@ -40,6 +40,11 @@
   </div>
 </div>
 
+<div class="section-title"><h2><span class="live-dot"></span>Peripherals</h2><span class="muted" style="font-size:0.8rem">auto-refresh</span><span class="rule"></span></div>
+<div hx-get="/fragment/peripherals" hx-trigger="load, every 4s" hx-swap="innerHTML">
+  <div class="empty">Loading peripherals…</div>
+</div>
+
 <div class="section-title"><h2><span class="live-dot"></span>Live health</h2><span class="rule"></span></div>
 <div class="grid" hx-ext="sse" sse-connect="/sse/metrics">
   <div class="card tile">

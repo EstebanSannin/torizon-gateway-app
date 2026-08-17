@@ -39,6 +39,19 @@ func renderInline(w http.ResponseWriter, contentTmpl string, data any) {
 	}
 }
 
+// renderFragment renders a single named template (an HTML fragment, no base
+// layout) — used by htmx-polled endpoints.
+func renderFragment(w http.ResponseWriter, file, define string, data any) {
+	tmpl, err := template.ParseFS(web.Templates, "templates/"+file)
+	if err != nil {
+		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.ExecuteTemplate(w, define, data); err != nil {
+		http.Error(w, "render error: "+err.Error(), http.StatusInternalServerError)
+	}
+}
+
 // ---- humanize helpers ----
 
 func humanBytes(b uint64) string {

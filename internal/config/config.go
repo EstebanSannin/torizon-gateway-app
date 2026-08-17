@@ -29,6 +29,9 @@ type Config struct {
 	DockerSocket string
 	// DBusSocket is the path to the system D-Bus socket (NetworkManager).
 	DBusSocket string
+	// SysfsPath is the sysfs mount to read hardware from (USB/block/CAN). "/sys"
+	// natively and in a container (host-global for USB/block; CAN needs host net).
+	SysfsPath string
 	// SessionTTL is how long a login session stays valid.
 	SessionTTL time.Duration
 	// DevMode relaxes some behavior for local development (never in production).
@@ -47,6 +50,7 @@ func Load() Config {
 		Hostname:     env("GATEWAY_HOSTNAME", "zinnia"),
 		DockerSocket: env("GATEWAY_DOCKER_SOCKET", "/var/run/docker.sock"),
 		DBusSocket:   env("GATEWAY_DBUS_SOCKET", "/run/dbus/system_bus_socket"),
+		SysfsPath:    env("GATEWAY_SYSFS", "/sys"),
 		SessionTTL:   envDuration("GATEWAY_SESSION_TTL", 24*time.Hour),
 		DevMode:      env("GATEWAY_DEV_MODE", "") == "1",
 	}
