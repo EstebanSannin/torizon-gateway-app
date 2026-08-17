@@ -13,6 +13,7 @@ import (
 	"github.com/toradex/torizon-gateway-app/internal/config"
 	"github.com/toradex/torizon-gateway-app/internal/containers"
 	"github.com/toradex/torizon-gateway-app/internal/hal"
+	"github.com/toradex/torizon-gateway-app/internal/logs"
 	"github.com/toradex/torizon-gateway-app/internal/network"
 	"github.com/toradex/torizon-gateway-app/internal/store"
 	"github.com/toradex/torizon-gateway-app/internal/sysinfo"
@@ -28,6 +29,7 @@ type Server struct {
 	auth        *auth.Service
 	store       *store.Store
 	peripherals *sysinfo.Peripherals
+	syslogs     *logs.Service
 	mux         *http.ServeMux
 
 	pendMu  sync.Mutex
@@ -39,6 +41,7 @@ func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, net *n
 	s := &Server{
 		cfg: cfg, board: board, containers: cnt, network: net, auth: a, store: st,
 		peripherals: sysinfo.NewPeripherals(cfg.SysfsPath, cfg.HostRoot),
+		syslogs:     logs.New(cfg.HostRoot),
 		mux:         http.NewServeMux(),
 		pending:     make(map[string]pendingChange),
 	}
@@ -80,13 +83,16 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /containers/{id}/stop", s.requireAuth(s.handleContainerAction("stop")))
 	s.mux.HandleFunc("POST /containers/{id}/restart", s.requireAuth(s.handleContainerAction("restart")))
 	s.mux.HandleFunc("GET /updates", s.requireAuth(s.handleUpdates))
+	s.mux.HandleFunc("GET /logs", s.requireAuth(s.handleLogsPage))
 
-	// HTML fragments (htmx polling) — protected.
+	// HTML fragments (htmx) — protected.
 	s.mux.HandleFunc("GET /fragment/peripherals", s.requireAuth(s.handlePeripheralsFragment))
+	s.mux.HandleFunc("GET /fragment/logbox", s.requireAuth(s.handleLogboxFragment))
 
 	// Live streams (SSE) — protected.
 	s.mux.HandleFunc("GET /sse/metrics", s.requireAuth(s.handleMetricsSSE))
 	s.mux.HandleFunc("GET /sse/logs/{id}", s.requireAuth(s.handleContainerLogsSSE))
+	s.mux.HandleFunc("GET /sse/journal", s.requireAuth(s.handleJournalSSE))
 }
 
 // layout holds fields every authenticated page needs (nav highlight, current

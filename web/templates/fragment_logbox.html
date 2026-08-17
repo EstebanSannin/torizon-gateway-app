@@ -1,0 +1,3 @@
+{{define "logbox"}}
+<pre class="logbox" hx-ext="sse" sse-connect="/sse/journal?{{.Query}}" sse-swap="line" hx-swap="beforeend scroll:bottom"></pre>
+{{end}}

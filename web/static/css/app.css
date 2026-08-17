@@ -157,12 +157,13 @@ td.nowrap, td .nowrap { white-space: nowrap; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .hint { color: var(--color-text-muted); font-weight: 400; font-size: 0.8rem; }
 label { font-size: 0.85rem; color: var(--color-text-muted); font-weight: 600; }
-input[type=text], input[type=password], input[type=number] {
+input[type=text], input[type=password], input[type=number], select {
   font-family: inherit; font-size: 0.95rem; padding: 10px 12px; width: 100%;
   border: 1px solid var(--color-border-strong); border-radius: 9px; color: var(--color-text); background: var(--color-surface);
   transition: border-color .14s, box-shadow .14s;
 }
-input:focus { outline: none; border-color: var(--color-accent); box-shadow: var(--ring); }
+select { cursor: pointer; }
+input:focus, select:focus { outline: none; border-color: var(--color-accent); box-shadow: var(--ring); }
 
 .seg { flex: 1; text-align: center; padding: 10px; border: 1px solid var(--color-border-strong); border-radius: 9px; font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); cursor: pointer; transition: all .14s; }
 .seg--on { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent-strong); }

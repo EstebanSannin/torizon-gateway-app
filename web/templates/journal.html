@@ -1,0 +1,31 @@
+{{define "content"}}
+<div class="page-header">
+  <p class="muted" style="margin:0">systemd journal &amp; kernel log — live stream.</p>
+  {{if .Available}}<span class="badge badge--ok">journal</span>{{else}}<span class="badge badge--warn">journal unavailable</span>{{end}}
+</div>
+
+{{if not .Available}}
+  <div class="card"><p style="margin:0">The systemd journal is not readable. Ensure the container is in the <code>systemd-journal</code> group and the host journal is mounted (<code>/host/run/log/journal</code>).</p></div>
+{{else}}
+  <div class="card" style="margin-bottom:16px">
+    <form class="logfilter" hx-get="/fragment/logbox" hx-target="#logwrap" hx-trigger="load, change delay:150ms"
+          style="display:flex; gap:16px; align-items:end; flex-wrap:wrap; margin:0">
+      <div class="field" style="min-width:240px">
+        <label>Unit</label>
+        <select name="unit">
+          <option value="">All units</option>
+          {{range .Units}}<option value="{{.}}">{{.}}</option>{{end}}
+        </select>
+      </div>
+      <div class="field" style="width:110px">
+        <label>Lines</label>
+        <input type="number" name="tail" value="200" min="10" max="1000">
+      </div>
+      <label style="display:flex; align-items:center; gap:8px; padding-bottom:10px; font-weight:600; color:var(--color-text)">
+        <input type="checkbox" name="kernel" value="1"> Kernel only
+      </label>
+    </form>
+  </div>
+  <div id="logwrap"><div class="empty">Loading…</div></div>
+{{end}}
+{{end}}

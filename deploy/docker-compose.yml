@@ -15,6 +15,12 @@ services:
     # in /sys/class/net, and it lets the self-signed cert auto-detect the real
     # LAN IP. The app binds :8443 directly on the host (no port mapping).
     network_mode: host
+    # Least-privilege supplementary groups by NUMERIC host GID (names don't
+    # resolve in a distroless container). Values below are Torizon defaults —
+    # verify on the device with: getent group docker systemd-journal
+    group_add:
+      - "990"   # docker          → Docker socket (container management)
+      - "988"   # systemd-journal → read the journal (Logs feature)
     environment:
       - GATEWAY_DATA_DIR=/data
       - GATEWAY_HOSTNAME=zinnia
