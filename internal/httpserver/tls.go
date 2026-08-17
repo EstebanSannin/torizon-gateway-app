@@ -52,15 +52,18 @@ func EnsureSelfSignedCert(certFile, keyFile, hostname string, extraSANs []string
 		}
 	}
 
+	// A proper self-signed *leaf* server certificate (NOT a CA). Marking it IsCA
+	// with KeyUsageCertSign made strict browsers (notably Safari/macOS) reject it
+	// with limited or no "proceed anyway" option.
 	tmpl := x509.Certificate{
 		SerialNumber:          serial,
 		Subject:               pkix.Name{CommonName: hostname, Organization: []string{"Torizon Gateway"}},
 		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().AddDate(10, 0, 0), // 10 years; device-local trust
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		NotAfter:              time.Now().AddDate(2, 0, 0), // 2 years (leaf certs should be short-lived)
+		KeyUsage:              x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
-		IsCA:                  true,
+		IsCA:                  false,
 		DNSNames:              dnsNames,
 		IPAddresses:           ips,
 	}
