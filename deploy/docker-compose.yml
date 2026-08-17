@@ -16,6 +16,11 @@ services:
     environment:
       - GATEWAY_DATA_DIR=/data
       - GATEWAY_HOSTNAME=zinnia
+      # Extra TLS SANs for the self-signed cert. A bridged container can't
+      # auto-discover the host's LAN IP, so set it here (comma-separated) if you
+      # reach the UI by IP — e.g. "192.168.1.102". Native/host-net deployments
+      # detect local IPs automatically. Delete data/tls/* to regenerate.
+      # - GATEWAY_TLS_SANS=192.168.1.50,gateway.lan
     volumes:
       # Container management (Docker engine). Root-equivalent — see backlog.
       - /var/run/docker.sock:/var/run/docker.sock

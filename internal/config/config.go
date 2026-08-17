@@ -6,6 +6,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -18,6 +19,10 @@ type Config struct {
 	// TLSCertFile / TLSKeyFile are generated on first boot if absent.
 	TLSCertFile string
 	TLSKeyFile  string
+	// TLSSANs are extra Subject Alternative Names (IPs/hostnames) for the
+	// self-signed cert — e.g. the device's LAN IP, which a bridged container
+	// cannot auto-discover. Comma-separated in GATEWAY_TLS_SANS.
+	TLSSANs []string
 	// Hostname advertised via mDNS, e.g. "zinnia".
 	Hostname string
 	// DockerSocket is the path to the Docker engine socket (container management).
@@ -38,6 +43,7 @@ func Load() Config {
 		DataDir:      dataDir,
 		TLSCertFile:  env("GATEWAY_TLS_CERT", filepath.Join(dataDir, "tls", "cert.pem")),
 		TLSKeyFile:   env("GATEWAY_TLS_KEY", filepath.Join(dataDir, "tls", "key.pem")),
+		TLSSANs:      splitCSV(env("GATEWAY_TLS_SANS", "")),
 		Hostname:     env("GATEWAY_HOSTNAME", "zinnia"),
 		DockerSocket: env("GATEWAY_DOCKER_SOCKET", "/var/run/docker.sock"),
 		DBusSocket:   env("GATEWAY_DBUS_SOCKET", "/run/dbus/system_bus_socket"),
@@ -51,6 +57,17 @@ func env(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// splitCSV splits a comma-separated list, trimming spaces and dropping empties.
+func splitCSV(s string) []string {
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func envDuration(key string, def time.Duration) time.Duration {

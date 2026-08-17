@@ -54,7 +54,7 @@ func main() {
 		board.Kind(), board.Model(), board.OSVersion())
 
 	// First-boot: generate a self-signed cert if none exists.
-	if err := httpserver.EnsureSelfSignedCert(cfg.TLSCertFile, cfg.TLSKeyFile, cfg.Hostname); err != nil {
+	if err := httpserver.EnsureSelfSignedCert(cfg.TLSCertFile, cfg.TLSKeyFile, cfg.Hostname, cfg.TLSSANs); err != nil {
 		log.Fatalf("tls setup: %v", err)
 	}
 
