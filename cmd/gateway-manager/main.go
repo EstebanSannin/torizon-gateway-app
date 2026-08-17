@@ -49,6 +49,7 @@ func main() {
 		log.Println("NM write permitted (checkpoint create/destroy succeeded)")
 		os.Exit(0)
 	}
+	hal.SetHostRoot(cfg.HostRoot)
 	board := hal.Detect()
 	log.Printf("torizon-gateway starting: board=%s model=%q os=%q",
 		board.Kind(), board.Model(), board.OSVersion())

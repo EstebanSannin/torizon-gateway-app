@@ -12,15 +12,21 @@ import (
 // dependency, keeping the image small). USB and block devices are host-global
 // in /sys even from a bridged container; CAN interfaces need host networking.
 type Peripherals struct {
-	Sysfs string // sysfs root, e.g. "/sys"
+	Sysfs    string // sysfs root, e.g. "/sys"
+	HostRoot string // host filesystem root ("/" native, "/host" in a container)
 }
 
-// NewPeripherals builds a reader rooted at the given sysfs path.
-func NewPeripherals(sysfs string) *Peripherals {
+// NewPeripherals builds a reader over the given sysfs and host-filesystem roots.
+// HostRoot is where the host's "/" is visible (for the mount table and statfs);
+// "/" natively, "/host" when the host is bind-mounted into a container.
+func NewPeripherals(sysfs, hostRoot string) *Peripherals {
 	if sysfs == "" {
 		sysfs = "/sys"
 	}
-	return &Peripherals{Sysfs: sysfs}
+	if hostRoot == "" {
+		hostRoot = "/"
+	}
+	return &Peripherals{Sysfs: sysfs, HostRoot: hostRoot}
 }
 
 // USBDevice is a connected USB device (not an interface or root hub).
@@ -73,24 +79,36 @@ func (p *Peripherals) USB() []USBDevice {
 	return out
 }
 
-// BlockDevice is a whole-disk block device (partitions excluded).
+// BlockDevice is a whole-disk block device with its partitions.
 type BlockDevice struct {
 	Name       string
 	SizeBytes  uint64
 	Removable  bool
 	Transport  string // "USB", "MMC", "NVMe", "virtual", "other"
 	Model      string
-	Mountpoint string // best-effort (from /proc/mounts)
+	Partitions []Partition
 }
 
-// Block lists whole block devices, flagging removable USB media (USB sticks).
+// Partition is a partition (or a whole-disk filesystem) with mount/usage info.
+type Partition struct {
+	Name       string
+	SizeBytes  uint64
+	Mountpoint string
+	FSType     string
+	UsedBytes  uint64  // filesystem used (mounted only)
+	TotalBytes uint64  // filesystem capacity (mounted only)
+	UsedPct    float64 // mounted only
+}
+
+// Block lists whole block devices and their partitions, with mount points and
+// filesystem usage for mounted ones. Removable USB media are flagged.
 func (p *Peripherals) Block() []BlockDevice {
 	base := filepath.Join(p.Sysfs, "block")
 	entries, err := os.ReadDir(base)
 	if err != nil {
 		return nil
 	}
-	mounts := readMounts()
+	mounts := readMounts(p.HostRoot)
 	var out []BlockDevice
 	for _, e := range entries {
 		name := e.Name()
@@ -100,17 +118,69 @@ func (p *Peripherals) Block() []BlockDevice {
 		dir := filepath.Join(base, name)
 		sectors, _ := strconv.ParseUint(readTrim(filepath.Join(dir, "size")), 10, 64)
 		link, _ := os.Readlink(dir)
-		out = append(out, BlockDevice{
-			Name:       name,
-			SizeBytes:  sectors * 512,
-			Removable:  readTrim(filepath.Join(dir, "removable")) == "1",
-			Transport:  transportOf(name, link),
-			Model:      readTrim(filepath.Join(dir, "device/model")),
-			Mountpoint: mounts["/dev/"+name],
-		})
+		bd := BlockDevice{
+			Name:      name,
+			SizeBytes: sectors * 512,
+			Removable: readTrim(filepath.Join(dir, "removable")) == "1",
+			Transport: transportOf(name, link),
+			Model:     readTrim(filepath.Join(dir, "device/model")),
+		}
+		bd.Partitions = p.partitionsOf(dir, name, mounts)
+		// Whole-disk filesystem (no partition table) — represent as one entry.
+		if len(bd.Partitions) == 0 {
+			if m, ok := mounts[readTrim(filepath.Join(dir, "dev"))]; ok {
+				bd.Partitions = []Partition{fillUsage(Partition{
+					Name: name, SizeBytes: bd.SizeBytes, Mountpoint: m.point, FSType: m.fstype,
+				}, p.HostRoot)}
+			}
+		}
+		out = append(out, bd)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
+}
+
+// partitionsOf enumerates a disk's partitions (sysfs subdirs with a "partition"
+// file), attaching mount point + filesystem usage. Partitions are matched to
+// mounts by major:minor (robust to /dev/disk/by-label symlinks).
+func (p *Peripherals) partitionsOf(diskDir, disk string, mounts map[string]mount) []Partition {
+	entries, err := os.ReadDir(diskDir)
+	if err != nil {
+		return nil
+	}
+	var parts []Partition
+	for _, e := range entries {
+		pn := e.Name()
+		if !strings.HasPrefix(pn, disk) {
+			continue
+		}
+		pdir := filepath.Join(diskDir, pn)
+		if !fileExists(filepath.Join(pdir, "partition")) {
+			continue
+		}
+		sectors, _ := strconv.ParseUint(readTrim(filepath.Join(pdir, "size")), 10, 64)
+		part := Partition{Name: pn, SizeBytes: sectors * 512}
+		if m, ok := mounts[readTrim(filepath.Join(pdir, "dev"))]; ok {
+			part.Mountpoint = m.point
+			part.FSType = m.fstype
+			part = fillUsage(part, p.HostRoot)
+		}
+		parts = append(parts, part)
+	}
+	sort.Slice(parts, func(i, j int) bool { return parts[i].Name < parts[j].Name })
+	return parts
+}
+
+// fillUsage adds filesystem usage (statfs) for a mounted partition. The
+// mountpoint is a host path, so it is statfs'd through the host root.
+func fillUsage(part Partition, hostRoot string) Partition {
+	if part.Mountpoint == "" {
+		return part
+	}
+	if d, err := DiskUsage(filepath.Join(hostRoot, part.Mountpoint)); err == nil {
+		part.UsedBytes, part.TotalBytes, part.UsedPct = d.UsedBytes, d.TotalBytes, d.UsedPct
+	}
+	return part
 }
 
 // CANInterface is a CAN bus network interface.
@@ -166,20 +236,55 @@ func transportOf(name, sysfsLink string) string {
 	}
 }
 
-// readMounts maps device path → mountpoint from /proc/mounts (best effort).
-func readMounts() map[string]string {
-	out := map[string]string{}
-	b, err := os.ReadFile("/proc/mounts")
+type mount struct {
+	point  string
+	fstype string
+}
+
+// readMounts maps a device's "major:minor" → mount info, read from the host
+// mount table (/proc/1/mountinfo under hostRoot). Keying by major:minor is
+// robust to /dev/disk/by-* symlinks. When a device is mounted in several places
+// (e.g. OSTree bind mounts), the whole-device mount (root "/") is preferred.
+func readMounts(hostRoot string) map[string]mount {
+	out := map[string]mount{}
+	b, err := os.ReadFile(filepath.Join(hostRoot, "proc/1/mountinfo"))
 	if err != nil {
-		return out
-	}
-	for _, line := range strings.Split(string(b), "\n") {
-		f := strings.Fields(line)
-		if len(f) >= 2 && strings.HasPrefix(f[0], "/dev/") {
-			out[f[0]] = f[1]
+		if b, err = os.ReadFile(filepath.Join(hostRoot, "proc/self/mountinfo")); err != nil {
+			return out
 		}
 	}
+	for _, line := range strings.Split(string(b), "\n") {
+		sep := strings.Index(line, " - ")
+		if sep < 0 {
+			continue
+		}
+		left := strings.Fields(line[:sep])    // id parent maj:min root mountpoint opts...
+		right := strings.Fields(line[sep+3:]) // fstype source superopts
+		if len(left) < 5 || len(right) < 1 {
+			continue
+		}
+		majmin, root, point, fstype := left[2], left[3], unescapeMount(left[4]), right[0]
+		// Prefer the whole-device mount (root "/") over subtree bind mounts.
+		if _, seen := out[majmin]; seen && root != "/" {
+			continue
+		}
+		out[majmin] = mount{point: point, fstype: fstype}
+	}
 	return out
+}
+
+// unescapeMount decodes the octal escapes mountinfo uses for space/tab/newline.
+func unescapeMount(s string) string {
+	if !strings.Contains(s, `\`) {
+		return s
+	}
+	r := strings.NewReplacer(`\040`, " ", `\011`, "\t", `\012`, "\n", `\134`, `\`)
+	return r.Replace(s)
+}
+
+func fileExists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
 }
 
 // usbClassName maps a bDeviceClass hex code to a short human label.

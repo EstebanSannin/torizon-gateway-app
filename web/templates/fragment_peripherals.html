@@ -22,13 +22,24 @@
       <span class="label">Storage &amp; removable media</span>
     </div>
     {{range .Block}}
-      <div style="display:flex; justify-content:space-between; gap:10px; border-top:1px solid var(--color-border); padding-top:8px">
-        <div>
-          <div style="font-weight:600"><span class="mono">{{.Name}}</span> · {{.SizeHuman}}{{if .Model}} · {{.Model}}{{end}}</div>
-          <div class="muted" style="font-size:0.78rem">{{if .Mountpoint}}mounted at {{.Mountpoint}}{{else}}not mounted{{end}}</div>
+      <div style="border-top:1px solid var(--color-border); padding-top:8px">
+        <div style="display:flex; justify-content:space-between; gap:10px">
+          <div style="font-weight:600"><span class="mono">{{.Name}}</span> · {{hbytes .SizeBytes}}{{if .Model}} · {{.Model}}{{end}}</div>
+          {{if and .Removable (eq .Transport "USB")}}<span class="badge badge--warn">USB stick</span>
+          {{else}}<span class="badge badge--plain">{{.Transport}}</span>{{end}}
         </div>
-        {{if and .Removable (eq .Transport "USB")}}<span class="badge badge--warn">USB stick</span>
-        {{else}}<span class="badge badge--plain">{{.Transport}}</span>{{end}}
+        {{range .Partitions}}
+          <div style="margin:6px 0 0 12px; padding-left:10px; border-left:2px solid var(--color-border)">
+            <div style="display:flex; justify-content:space-between; gap:8px; font-size:0.82rem">
+              <span><span class="mono">{{.Name}}</span> · {{hbytes .SizeBytes}}{{if .FSType}} · {{.FSType}}{{end}}</span>
+              {{if .Mountpoint}}<span class="mono muted">{{.Mountpoint}}</span>{{else}}<span class="muted">not mounted</span>{{end}}
+            </div>
+            {{if .Mountpoint}}
+              <div class="meter" style="margin-top:5px; height:5px"><div class="meter-fill" style="width: {{printf "%.0f" .UsedPct}}%"></div></div>
+              <div class="muted" style="font-size:0.72rem; margin-top:2px">{{hbytes .UsedBytes}} / {{hbytes .TotalBytes}} used ({{printf "%.0f%%" .UsedPct}})</div>
+            {{end}}
+          </div>
+        {{end}}
       </div>
     {{else}}<div class="muted" style="font-size:0.85rem">No block devices.</div>{{end}}
   </div>

@@ -8,11 +8,16 @@ import (
 	"github.com/toradex/torizon-gateway-app/web"
 )
 
+// tmplFuncs are helpers available in every template.
+var tmplFuncs = template.FuncMap{
+	"hbytes": humanBytes,
+}
+
 // render parses base.html + the given page file (both from the embedded FS) and
 // executes the "base" template. Templates are re-parsed per request for now;
 // switch to a parse-once cache before GA.
 func render(w http.ResponseWriter, pageFile string, data any) {
-	tmpl, err := template.ParseFS(web.Templates, "templates/base.html", "templates/"+pageFile)
+	tmpl, err := template.New("t").Funcs(tmplFuncs).ParseFS(web.Templates, "templates/base.html", "templates/"+pageFile)
 	if err != nil {
 		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -25,7 +30,7 @@ func render(w http.ResponseWriter, pageFile string, data any) {
 // renderInline parses base.html plus an inline `{{define "content"}}...{{end}}`
 // string. Used for simple placeholder pages.
 func renderInline(w http.ResponseWriter, contentTmpl string, data any) {
-	tmpl, err := template.ParseFS(web.Templates, "templates/base.html")
+	tmpl, err := template.New("t").Funcs(tmplFuncs).ParseFS(web.Templates, "templates/base.html")
 	if err != nil {
 		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -42,7 +47,7 @@ func renderInline(w http.ResponseWriter, contentTmpl string, data any) {
 // renderFragment renders a single named template (an HTML fragment, no base
 // layout) — used by htmx-polled endpoints.
 func renderFragment(w http.ResponseWriter, file, define string, data any) {
-	tmpl, err := template.ParseFS(web.Templates, "templates/"+file)
+	tmpl, err := template.New("t").Funcs(tmplFuncs).ParseFS(web.Templates, "templates/"+file)
 	if err != nil {
 		http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
 		return

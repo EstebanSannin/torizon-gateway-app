@@ -32,6 +32,9 @@ type Config struct {
 	// SysfsPath is the sysfs mount to read hardware from (USB/block/CAN). "/sys"
 	// natively and in a container (host-global for USB/block; CAN needs host net).
 	SysfsPath string
+	// HostRoot is where the host filesystem "/" is visible: "/" natively, or a
+	// mount like "/host" in a container (for the host mount table + statfs).
+	HostRoot string
 	// SessionTTL is how long a login session stays valid.
 	SessionTTL time.Duration
 	// DevMode relaxes some behavior for local development (never in production).
@@ -51,6 +54,7 @@ func Load() Config {
 		DockerSocket: env("GATEWAY_DOCKER_SOCKET", "/var/run/docker.sock"),
 		DBusSocket:   env("GATEWAY_DBUS_SOCKET", "/run/dbus/system_bus_socket"),
 		SysfsPath:    env("GATEWAY_SYSFS", "/sys"),
+		HostRoot:     env("GATEWAY_HOST_ROOT", "/"),
 		SessionTTL:   envDuration("GATEWAY_SESSION_TTL", 24*time.Hour),
 		DevMode:      env("GATEWAY_DEV_MODE", "") == "1",
 	}

@@ -38,7 +38,7 @@ type Server struct {
 func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, net *network.Service, a *auth.Service, st *store.Store) *Server {
 	s := &Server{
 		cfg: cfg, board: board, containers: cnt, network: net, auth: a, store: st,
-		peripherals: sysinfo.NewPeripherals(cfg.SysfsPath),
+		peripherals: sysinfo.NewPeripherals(cfg.SysfsPath, cfg.HostRoot),
 		mux:         http.NewServeMux(),
 		pending:     make(map[string]pendingChange),
 	}

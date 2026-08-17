@@ -18,21 +18,21 @@ services:
     environment:
       - GATEWAY_DATA_DIR=/data
       - GATEWAY_HOSTNAME=zinnia
-      # Extra TLS SANs for the self-signed cert. A bridged container can't
-      # auto-discover the host's LAN IP, so set it here (comma-separated) if you
-      # reach the UI by IP — e.g. "192.168.1.102". Native/host-net deployments
-      # detect local IPs automatically. Delete data/tls/* to regenerate.
+      # Where the host filesystem "/" is visible in the container (for the host
+      # mount table, statfs of mountpoints, and — later — the file explorer).
+      - GATEWAY_HOST_ROOT=/host
+      # Extra TLS SANs (only needed for a bridged container that can't see the
+      # host IP; host networking auto-detects it). Delete data/tls/* to regen.
       # - GATEWAY_TLS_SANS=192.168.1.50,gateway.lan
     volumes:
       # Container management (Docker engine). Root-equivalent — see backlog.
       - /var/run/docker.sock:/var/run/docker.sock
       # Network configuration (NetworkManager over system D-Bus).
       - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
-      # Board info (read-only).
-      - /proc/device-tree:/host/device-tree:ro
-      - /etc/os-release:/host/os-release:ro
-      # Offline updates spool (path to confirm against Torizon OS — backlog #4).
-      # - /var/sota:/host/sota
+      # Host filesystem (read-only): device-tree/os-release, the mount table
+      # (/host/proc/1/mountinfo) and partition usage. The file explorer will add
+      # rw access to /etc and /var specifically. Recursive bind includes submounts.
+      - /:/host:ro
       # App-owned persistent state (SQLite DB, TLS cert).
       - gateway-data:/data
     healthcheck:
