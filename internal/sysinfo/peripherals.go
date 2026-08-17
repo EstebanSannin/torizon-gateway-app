@@ -211,6 +211,106 @@ func (p *Peripherals) CAN() []CANInterface {
 	return out
 }
 
+// SerialPort is a serial/UART device.
+type SerialPort struct {
+	Name string
+	Kind string // "USB serial", "CDC ACM", "UART", "USB gadget"
+}
+
+// Serial lists meaningful serial ports from /sys/class/tty (skips the many
+// unused ttyS* 8250 stubs).
+func (p *Peripherals) Serial() []SerialPort {
+	base := filepath.Join(p.Sysfs, "class/tty")
+	entries, err := os.ReadDir(base)
+	if err != nil {
+		return nil
+	}
+	var out []SerialPort
+	for _, e := range entries {
+		n := e.Name()
+		var kind string
+		switch {
+		case strings.HasPrefix(n, "ttyUSB"):
+			kind = "USB serial"
+		case strings.HasPrefix(n, "ttyACM"):
+			kind = "CDC ACM"
+		case strings.HasPrefix(n, "ttymxc"):
+			kind = "UART"
+		case strings.HasPrefix(n, "ttyGS"):
+			kind = "USB gadget"
+		default:
+			continue
+		}
+		out = append(out, SerialPort{Name: n, Kind: kind})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+// Bus is an I²C/GPIO controller entry with a human detail string.
+type Bus struct {
+	Name   string
+	Detail string
+}
+
+// I2C lists I²C buses from /sys/class/i2c-dev.
+func (p *Peripherals) I2C() []Bus {
+	base := filepath.Join(p.Sysfs, "class/i2c-dev")
+	entries, err := os.ReadDir(base)
+	if err != nil {
+		return nil
+	}
+	var out []Bus
+	for _, e := range entries {
+		name := readTrim(filepath.Join(base, e.Name(), "name"))
+		if name == "" {
+			name = readTrim(filepath.Join(base, e.Name(), "device/name"))
+		}
+		out = append(out, Bus{Name: e.Name(), Detail: name})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+// SPI lists SPI device nodes (spidevX.Y).
+func (p *Peripherals) SPI() []string {
+	base := filepath.Join(p.Sysfs, "class/spidev")
+	entries, err := os.ReadDir(base)
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, e := range entries {
+		out = append(out, e.Name())
+	}
+	sort.Strings(out)
+	return out
+}
+
+// GPIO lists GPIO controllers from /sys/class/gpio (label + line count).
+func (p *Peripherals) GPIO() []Bus {
+	base := filepath.Join(p.Sysfs, "class/gpio")
+	entries, err := os.ReadDir(base)
+	if err != nil {
+		return nil
+	}
+	var out []Bus
+	for _, e := range entries {
+		if !strings.HasPrefix(e.Name(), "gpiochip") {
+			continue
+		}
+		label := readTrim(filepath.Join(base, e.Name(), "label"))
+		n := readTrim(filepath.Join(base, e.Name(), "ngpio"))
+		detail := label
+		if n != "" {
+			detail = strings.TrimSpace(label + " · " + n + " lines")
+		}
+		out = append(out, Bus{Name: e.Name(), Detail: detail})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
 // ---- helpers ----
 
 func readTrim(path string) string {

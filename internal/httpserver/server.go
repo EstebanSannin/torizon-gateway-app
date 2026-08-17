@@ -119,6 +119,8 @@ type dashData struct {
 	Disk           sysinfo.Disk
 	DiskTotalHuman string
 	DiskUsedHuman  string
+	NetIface       string // primary connected interface (summary)
+	NetIPv4        string
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
@@ -136,7 +138,26 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		DiskTotalHuman: humanBytes(disk.TotalBytes),
 		DiskUsedHuman:  humanBytes(disk.UsedBytes),
 	}
+	data.NetIface, data.NetIPv4 = s.primaryConnection()
 	render(w, "dashboard.html", data)
+}
+
+// primaryConnection returns the first connected interface with an IPv4 address
+// (a compact connectivity summary for the dashboard). Empty when unavailable.
+func (s *Server) primaryConnection() (iface, ipv4 string) {
+	if s.network == nil || !s.network.Available() {
+		return "", ""
+	}
+	ifaces, err := s.network.Interfaces()
+	if err != nil {
+		return "", ""
+	}
+	for _, i := range ifaces {
+		if i.State == "Connected" && len(i.IPv4) > 0 {
+			return i.Name, i.IPv4[0]
+		}
+	}
+	return "", ""
 }
 
 // containersData is the template model for the container list.

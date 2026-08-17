@@ -56,5 +56,32 @@
       </div>
     {{else}}<div class="muted" style="font-size:0.85rem">No CAN interfaces.</div>{{end}}
   </div>
+
+  <div class="card stack" style="gap:12px">
+    <div class="tile-head">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 2v2M12 2v2M16 2v2M8 20v2M12 20v2M16 20v2M2 8h2M2 12h2M2 16h2M20 8h2M20 12h2M20 16h2"/></svg></span>
+      <span class="label">Serial &amp; buses</span>
+    </div>
+    <div>
+      <div class="muted" style="font-size:0.72rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:4px">Serial ports</div>
+      {{range .Serial}}<div style="font-size:0.83rem"><span class="mono">{{.Name}}</span> <span class="muted">· {{.Kind}}</span></div>
+      {{else}}<div class="muted" style="font-size:0.83rem">none</div>{{end}}
+    </div>
+    <div>
+      <div class="muted" style="font-size:0.72rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin:6px 0 4px">I²C buses <span class="badge badge--plain">{{len .I2C}}</span></div>
+      {{range .I2C}}<div style="font-size:0.83rem"><span class="mono">{{.Name}}</span>{{if .Detail}} <span class="muted">· {{.Detail}}</span>{{end}}</div>
+      {{else}}<div class="muted" style="font-size:0.83rem">none</div>{{end}}
+    </div>
+    <div style="display:flex; gap:20px; flex-wrap:wrap">
+      <div>
+        <div class="muted" style="font-size:0.72rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin:6px 0 4px">SPI</div>
+        {{range .SPI}}<div style="font-size:0.83rem"><span class="mono">{{.}}</span></div>{{else}}<div class="muted" style="font-size:0.83rem">none</div>{{end}}
+      </div>
+      <div>
+        <div class="muted" style="font-size:0.72rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin:6px 0 4px">GPIO chips</div>
+        {{range .GPIO}}<div style="font-size:0.83rem"><span class="mono">{{.Name}}</span>{{if .Detail}} <span class="muted">· {{.Detail}}</span>{{end}}</div>{{else}}<div class="muted" style="font-size:0.83rem">none</div>{{end}}
+      </div>
+    </div>
+  </div>
 </div>
 {{end}}
