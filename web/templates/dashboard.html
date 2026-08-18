@@ -48,28 +48,32 @@
   </div>
 </div>
 
-<div class="section-title"><h2><span class="live-dot"></span>Peripherals</h2><span class="muted" style="font-size:0.8rem">auto-refresh</span><span class="rule"></span></div>
-<div hx-get="/fragment/peripherals" hx-trigger="load, every 4s" hx-swap="innerHTML">
-  <div class="empty">Loading peripherals…</div>
+<div class="section-title"><h2><span class="live-dot"></span>Live health</h2><span class="muted" style="font-size:0.8rem">live · 2s</span><span class="rule"></span></div>
+<div class="grid" hx-ext="sse" sse-connect="/sse/metrics">
+  <div class="card tile metric">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 2v3M14 2v3M10 19v3M14 19v3M2 10h3M2 14h3M19 10h3M19 14h3"/></svg></span><span class="label">CPU load (1m)</span></div>
+    <div class="metric-body" sse-swap="cpu"><div class="metric-val">{{printf "%.2f" .Metrics.CPULoad1}}</div></div>
+  </div>
+  <div class="card tile metric">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v10M11 7v10M15 7v10"/></svg></span><span class="label">Memory used</span></div>
+    <div class="metric-body" sse-swap="mem"><div class="metric-val">{{.MemUsedHuman}}</div></div>
+  </div>
+  <div class="card tile metric">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 13V5a2 2 0 014 0v8a4 4 0 11-4 0z"/></svg></span><span class="label">SoC temperature</span></div>
+    <div class="metric-body" sse-swap="temp"><div class="metric-val">{{if gt .Metrics.SoCTempCelsius 0.0}}{{printf "%.1f°C" .Metrics.SoCTempCelsius}}{{else}}—{{end}}</div></div>
+  </div>
+  <div class="card tile metric">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="label">Uptime</span></div>
+    <div class="metric-body" sse-swap="uptime"><div class="metric-val" style="font-size:1.15rem">{{.UptimeHuman}}</div></div>
+  </div>
+  <div class="card tile metric" style="grid-column: span 2;">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 12h4l2-4 4 8 2-4h4"/></svg></span><span class="label">Network throughput</span></div>
+    <div class="metric-body net-body" sse-swap="net"><div class="net-head"><span class="net-iface">{{if .NetIface}}{{.NetIface}}{{else}}—{{end}}</span></div><div class="net-rates"><span class="net-rate">↓ …</span><span class="net-rate">↑ …</span></div></div>
+  </div>
 </div>
 
-<div class="section-title"><h2><span class="live-dot"></span>Live health</h2><span class="rule"></span></div>
-<div class="grid" hx-ext="sse" sse-connect="/sse/metrics">
-  <div class="card tile">
-    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 2v3M14 2v3M10 19v3M14 19v3M2 10h3M2 14h3M19 10h3M19 14h3"/></svg></span><span class="label">CPU load (1m)</span></div>
-    <div class="value" sse-swap="cpu">{{printf "%.2f" .Metrics.CPULoad1}}</div>
-  </div>
-  <div class="card tile">
-    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v10M11 7v10M15 7v10"/></svg></span><span class="label">Memory used</span></div>
-    <div class="value" sse-swap="mem">{{.MemUsedHuman}}</div>
-  </div>
-  <div class="card tile">
-    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 13V5a2 2 0 014 0v8a4 4 0 11-4 0z"/></svg></span><span class="label">SoC temperature</span></div>
-    <div class="value" sse-swap="temp">{{if gt .Metrics.SoCTempCelsius 0.0}}{{printf "%.1f°C" .Metrics.SoCTempCelsius}}{{else}}—{{end}}</div>
-  </div>
-  <div class="card tile">
-    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="label">Uptime</span></div>
-    <div class="value sm" sse-swap="uptime">{{.UptimeHuman}}</div>
-  </div>
+<div class="section-title"><h2>Peripherals</h2><span class="muted" style="font-size:0.8rem">auto-refresh</span><span class="rule"></span></div>
+<div hx-get="/fragment/peripherals" hx-trigger="load, every 4s" hx-swap="innerHTML">
+  <div class="empty">Loading peripherals…</div>
 </div>
 {{end}}

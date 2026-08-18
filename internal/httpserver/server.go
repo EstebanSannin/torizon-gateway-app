@@ -226,20 +226,63 @@ func (s *Server) handleMetricsSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	ticker := time.NewTicker(3 * time.Second)
+	const window = 40 // samples kept per sparkline
+	var cpuBuf, memBuf, tempBuf, netBuf []float64
+
+	iface := sysinfo.DefaultIface()
+	prevRx, prevTx := sysinfo.NetCounters(s.cfg.SysfsPath, iface)
+	prevT := time.Now()
+
+	emit := func() {
+		m, _ := s.board.Metrics()
+
+		cpuBuf = ring(cpuBuf, m.CPULoad1, window)
+		fmt.Fprintf(w, "event: cpu\ndata: %s\n\n", metricBody(fmt.Sprintf("%.2f", m.CPULoad1), sparkline(cpuBuf)))
+
+		memBuf = ring(memBuf, float64(m.MemUsedBytes), window)
+		fmt.Fprintf(w, "event: mem\ndata: %s\n\n", metricBody(humanBytes(m.MemUsedBytes), sparkline(memBuf)))
+
+		tempBuf = ring(tempBuf, m.SoCTempCelsius, window)
+		fmt.Fprintf(w, "event: temp\ndata: %s\n\n", metricBody(tempStr(m.SoCTempCelsius), sparkline(tempBuf)))
+
+		fmt.Fprintf(w, "event: uptime\ndata: %s\n\n", metricBody(humanDuration(m.UptimeSeconds), ""))
+
+		// Network throughput (rate = delta bytes / elapsed).
+		rx, tx := sysinfo.NetCounters(s.cfg.SysfsPath, iface)
+		now := time.Now()
+		dt := now.Sub(prevT).Seconds()
+		var rxRate, txRate float64
+		if dt > 0 {
+			rxRate = float64(rx-prevRx) / dt
+			txRate = float64(tx-prevTx) / dt
+		}
+		prevRx, prevTx, prevT = rx, tx, now
+		netBuf = ring(netBuf, rxRate+txRate, window)
+		fmt.Fprintf(w, "event: net\ndata: %s\n\n", netBody(iface, rxRate, txRate, sparkline(netBuf)))
+
+		flusher.Flush()
+	}
+
+	emit() // paint immediately, don't wait a full tick
+	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-r.Context().Done():
 			return
 		case <-ticker.C:
-			m, _ := s.board.Metrics()
-			// htmx SSE: one named event per swap target.
-			fmt.Fprintf(w, "event: cpu\ndata: %.2f\n\n", m.CPULoad1)
-			fmt.Fprintf(w, "event: mem\ndata: %s\n\n", humanBytes(m.MemUsedBytes))
-			fmt.Fprintf(w, "event: temp\ndata: %s\n\n", tempStr(m.SoCTempCelsius))
-			fmt.Fprintf(w, "event: uptime\ndata: %s\n\n", humanDuration(m.UptimeSeconds))
-			flusher.Flush()
+			emit()
 		}
 	}
+}
+
+// netBody renders the network tile body: interface, ↓rx/↑tx rates, sparkline.
+func netBody(iface string, rxRate, txRate float64, spark string) string {
+	if iface == "" {
+		iface = "—"
+	}
+	rates := fmt.Sprintf(`<span class="net-rate">↓ %s/s</span><span class="net-rate">↑ %s/s</span>`,
+		humanBytes(uint64(rxRate)), humanBytes(uint64(txRate)))
+	return `<div class="net-head"><span class="net-iface">` + iface + `</span></div>` +
+		`<div class="net-rates">` + rates + `</div>` + spark
 }
