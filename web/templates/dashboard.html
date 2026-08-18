@@ -48,7 +48,7 @@
   </div>
 </div>
 
-<div class="section-title"><h2><span class="live-dot"></span>Live health</h2><span class="muted" style="font-size:0.8rem">live · 2s</span><span class="rule"></span></div>
+<div class="section-title"><h2><span class="live-dot"></span>Live health</h2><span class="muted" style="font-size:0.8rem">live · 1s</span><span class="rule"></span></div>
 <div class="grid" hx-ext="sse" sse-connect="/sse/metrics">
   <div class="card tile metric">
     <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 2v3M14 2v3M10 19v3M14 19v3M2 10h3M2 14h3M19 10h3M19 14h3"/></svg></span><span class="label">CPU load (1m)</span></div>
@@ -56,7 +56,7 @@
   </div>
   <div class="card tile metric">
     <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v10M11 7v10M15 7v10"/></svg></span><span class="label">Memory used</span></div>
-    <div class="metric-body" sse-swap="mem"><div class="metric-val">{{.MemUsedHuman}}</div></div>
+    <div class="metric-body" sse-swap="mem"><div class="metric-val">{{.MemUsedHuman}} <span class="metric-total">/ {{.MemTotalHuman}}</span></div></div>
   </div>
   <div class="card tile metric">
     <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 13V5a2 2 0 014 0v8a4 4 0 11-4 0z"/></svg></span><span class="label">SoC temperature</span></div>

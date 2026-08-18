@@ -135,6 +135,7 @@ type dashData struct {
 	Board          hal.BoardInfo
 	Metrics        hal.Metrics
 	MemUsedHuman   string
+	MemTotalHuman  string
 	UptimeHuman    string
 	Disk           sysinfo.Disk
 	DiskTotalHuman string
@@ -153,6 +154,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		Board:          s.board,
 		Metrics:        m,
 		MemUsedHuman:   humanBytes(m.MemUsedBytes),
+		MemTotalHuman:  humanBytes(m.MemTotalBytes),
 		UptimeHuman:    humanDuration(m.UptimeSeconds),
 		Disk:           disk,
 		DiskTotalHuman: humanBytes(disk.TotalBytes),
@@ -226,7 +228,7 @@ func (s *Server) handleMetricsSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	const window = 40 // samples kept per sparkline
+	const window = 60 // samples kept per sparkline (~1 min at 1s)
 	var cpuBuf, memBuf, tempBuf, netBuf []float64
 
 	iface := sysinfo.DefaultIface()
@@ -240,7 +242,8 @@ func (s *Server) handleMetricsSSE(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "event: cpu\ndata: %s\n\n", metricBody(fmt.Sprintf("%.2f", m.CPULoad1), sparkline(cpuBuf)))
 
 		memBuf = ring(memBuf, float64(m.MemUsedBytes), window)
-		fmt.Fprintf(w, "event: mem\ndata: %s\n\n", metricBody(humanBytes(m.MemUsedBytes), sparkline(memBuf)))
+		memVal := humanBytes(m.MemUsedBytes) + ` <span class="metric-total">/ ` + humanBytes(m.MemTotalBytes) + `</span>`
+		fmt.Fprintf(w, "event: mem\ndata: %s\n\n", metricBody(memVal, sparkline(memBuf)))
 
 		tempBuf = ring(tempBuf, m.SoCTempCelsius, window)
 		fmt.Fprintf(w, "event: temp\ndata: %s\n\n", metricBody(tempStr(m.SoCTempCelsius), sparkline(tempBuf)))
@@ -264,7 +267,7 @@ func (s *Server) handleMetricsSSE(w http.ResponseWriter, r *http.Request) {
 	}
 
 	emit() // paint immediately, don't wait a full tick
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
