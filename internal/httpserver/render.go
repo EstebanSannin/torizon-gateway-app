@@ -10,7 +10,27 @@ import (
 
 // tmplFuncs are helpers available in every template.
 var tmplFuncs = template.FuncMap{
-	"hbytes": humanBytes,
+	// hbytes formats a byte count regardless of the concrete integer type the
+	// template passes (uint64 from metrics/disk, int64 from FileInfo.Size).
+	"hbytes": func(v any) string {
+		switch n := v.(type) {
+		case uint64:
+			return humanBytes(n)
+		case int64:
+			return humanBytes(uint64(max0i64(n)))
+		case int:
+			return humanBytes(uint64(max0i64(int64(n))))
+		default:
+			return ""
+		}
+	},
+}
+
+func max0i64(n int64) int64 {
+	if n < 0 {
+		return 0
+	}
+	return n
 }
 
 // render parses base.html + the given page file (both from the embedded FS) and
