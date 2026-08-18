@@ -25,8 +25,13 @@ services:
       - GATEWAY_DATA_DIR=/data
       - GATEWAY_HOSTNAME=zinnia
       # Where the host filesystem "/" is visible in the container (for the host
-      # mount table, statfs of mountpoints, and — later — the file explorer).
+      # mount table, statfs of mountpoints, and the file explorer).
       - GATEWAY_HOST_ROOT=/host
+      # File explorer WRITES (edit/upload/delete), confined to /etc and /var and
+      # blocking secrets. OFF by default. To enable, set this to 1, add the two
+      # rw mounts below, and run the container as root (writes to root-owned
+      # paths). Leave off for a read-only, least-privilege deployment.
+      # - GATEWAY_FILES_WRITABLE=1
       # Extra TLS SANs (only needed for a bridged container that can't see the
       # host IP; host networking auto-detects it). Delete data/tls/* to regen.
       # - GATEWAY_TLS_SANS=192.168.1.50,gateway.lan
@@ -39,6 +44,10 @@ services:
       # (/host/proc/1/mountinfo) and partition usage. The file explorer will add
       # rw access to /etc and /var specifically. Recursive bind includes submounts.
       - /:/host:ro
+      # Writable areas for the file explorer (only with GATEWAY_FILES_WRITABLE=1
+      # and the container running as root). These override the read-only bind above.
+      # - /etc:/host/etc:rw
+      # - /var:/host/var:rw
       # App-owned persistent state (SQLite DB, TLS cert).
       - gateway-data:/data
     healthcheck:

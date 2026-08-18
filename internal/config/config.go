@@ -35,6 +35,9 @@ type Config struct {
 	// HostRoot is where the host filesystem "/" is visible: "/" natively, or a
 	// mount like "/host" in a container (for the host mount table + statfs).
 	HostRoot string
+	// FilesWritable enables the file explorer's edit/upload/delete (confined to
+	// /etc and /var). Off by default; requires /etc,/var mounted rw + root.
+	FilesWritable bool
 	// SessionTTL is how long a login session stays valid.
 	SessionTTL time.Duration
 	// DevMode relaxes some behavior for local development (never in production).
@@ -45,18 +48,19 @@ type Config struct {
 func Load() Config {
 	dataDir := env("GATEWAY_DATA_DIR", "/data")
 	return Config{
-		ListenAddr:   env("GATEWAY_LISTEN_ADDR", ":8443"),
-		DataDir:      dataDir,
-		TLSCertFile:  env("GATEWAY_TLS_CERT", filepath.Join(dataDir, "tls", "cert.pem")),
-		TLSKeyFile:   env("GATEWAY_TLS_KEY", filepath.Join(dataDir, "tls", "key.pem")),
-		TLSSANs:      splitCSV(env("GATEWAY_TLS_SANS", "")),
-		Hostname:     env("GATEWAY_HOSTNAME", "zinnia"),
-		DockerSocket: env("GATEWAY_DOCKER_SOCKET", "/var/run/docker.sock"),
-		DBusSocket:   env("GATEWAY_DBUS_SOCKET", "/run/dbus/system_bus_socket"),
-		SysfsPath:    env("GATEWAY_SYSFS", "/sys"),
-		HostRoot:     env("GATEWAY_HOST_ROOT", "/"),
-		SessionTTL:   envDuration("GATEWAY_SESSION_TTL", 24*time.Hour),
-		DevMode:      env("GATEWAY_DEV_MODE", "") == "1",
+		ListenAddr:    env("GATEWAY_LISTEN_ADDR", ":8443"),
+		DataDir:       dataDir,
+		TLSCertFile:   env("GATEWAY_TLS_CERT", filepath.Join(dataDir, "tls", "cert.pem")),
+		TLSKeyFile:    env("GATEWAY_TLS_KEY", filepath.Join(dataDir, "tls", "key.pem")),
+		TLSSANs:       splitCSV(env("GATEWAY_TLS_SANS", "")),
+		Hostname:      env("GATEWAY_HOSTNAME", "zinnia"),
+		DockerSocket:  env("GATEWAY_DOCKER_SOCKET", "/var/run/docker.sock"),
+		DBusSocket:    env("GATEWAY_DBUS_SOCKET", "/run/dbus/system_bus_socket"),
+		SysfsPath:     env("GATEWAY_SYSFS", "/sys"),
+		HostRoot:      env("GATEWAY_HOST_ROOT", "/"),
+		FilesWritable: env("GATEWAY_FILES_WRITABLE", "") == "1",
+		SessionTTL:    envDuration("GATEWAY_SESSION_TTL", 24*time.Hour),
+		DevMode:       env("GATEWAY_DEV_MODE", "") == "1",
 	}
 }
 

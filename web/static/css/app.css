@@ -195,6 +195,14 @@ input:focus, select:focus { outline: none; border-color: var(--color-accent); bo
   padding: 16px; max-height: 68vh; overflow: auto; white-space: pre; margin: 0;
 }
 
+.editor {
+  width: 100%; min-height: 60vh; resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; line-height: 1.5;
+  padding: 14px; border: 1px solid var(--color-border-strong); border-radius: 12px;
+  color: var(--color-text); background: var(--color-surface); white-space: pre; tab-size: 4;
+}
+.editor:focus { outline: none; border-color: var(--color-accent); box-shadow: var(--ring); }
+
 /* ============ Log viewer ============ */
 .logbox {
   background: #04182E; color: #CFE3F7; border: 1px solid #0B2c4d;

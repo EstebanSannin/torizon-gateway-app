@@ -3,7 +3,10 @@
   <div class="crumbs">
     {{range $i, $c := .Crumbs}}{{if $i}}<span class="sep">/</span>{{end}}<a href="/files?path={{$c.Path}}">{{if eq $c.Name "/"}}host{{else}}{{$c.Name}}{{end}}</a>{{end}}
   </div>
-  <a class="btn btn--ghost btn--sm" href="/files?path={{.Parent}}">↑ back</a>
+  <div style="display:flex; gap:8px">
+    {{if and .CanWrite (not .View.Binary)}}<a class="btn btn--primary btn--sm" href="/files/edit?path={{.View.Path}}">Edit</a>{{end}}
+    <a class="btn btn--ghost btn--sm" href="/files?path={{.Parent}}">↑ back</a>
+  </div>
 </div>
 
 {{if .Err}}

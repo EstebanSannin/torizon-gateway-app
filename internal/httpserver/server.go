@@ -44,7 +44,7 @@ func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, net *n
 		cfg: cfg, board: board, containers: cnt, network: net, auth: a, store: st,
 		peripherals: sysinfo.NewPeripherals(cfg.SysfsPath, cfg.HostRoot),
 		syslogs:     logs.New(cfg.HostRoot),
-		files:       files.New(cfg.HostRoot),
+		files:       files.New(cfg.HostRoot, cfg.FilesWritable),
 		mux:         http.NewServeMux(),
 		pending:     make(map[string]pendingChange),
 	}
@@ -89,6 +89,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /logs", s.requireAuth(s.handleLogsPage))
 	s.mux.HandleFunc("GET /files", s.requireAuth(s.handleFiles))
 	s.mux.HandleFunc("GET /files/view", s.requireAuth(s.handleFileView))
+	s.mux.HandleFunc("GET /files/edit", s.requireAuth(s.handleFileEdit))
+	s.mux.HandleFunc("POST /files/save", s.requireAuth(s.handleFileSave))
+	s.mux.HandleFunc("POST /files/upload", s.requireAuth(s.handleFileUpload))
+	s.mux.HandleFunc("POST /files/delete", s.requireAuth(s.handleFileDelete))
 
 	// HTML fragments (htmx) — protected.
 	s.mux.HandleFunc("GET /fragment/peripherals", s.requireAuth(s.handlePeripheralsFragment))

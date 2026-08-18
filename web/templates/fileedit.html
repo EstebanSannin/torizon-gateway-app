@@ -1,0 +1,22 @@
+{{define "content"}}
+<div class="page-header">
+  <div class="crumbs">
+    {{range $i, $c := .Crumbs}}{{if $i}}<span class="sep">/</span>{{end}}<a href="/files?path={{$c.Path}}">{{if eq $c.Name "/"}}host{{else}}{{$c.Name}}{{end}}</a>{{end}}
+  </div>
+  <span class="badge badge--warn">editing</span>
+</div>
+
+{{if .Truncated}}
+  <div class="callout callout--warn" style="margin-bottom:12px">This file is larger than 1&nbsp;MiB and was truncated — editing is disabled to avoid data loss.</div>
+{{end}}
+
+<form method="post" action="/files/save" class="stack">
+  <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+  <input type="hidden" name="path" value="{{.View.Path}}">
+  <textarea name="content" class="editor" spellcheck="false" wrap="off" {{if .Truncated}}disabled{{end}}>{{.View.Content}}</textarea>
+  <div style="display:flex; gap:12px">
+    <button type="submit" class="btn btn--primary" {{if .Truncated}}disabled{{end}}>Save changes</button>
+    <a class="btn btn--ghost" href="/files/view?path={{.View.Path}}">Cancel</a>
+  </div>
+</form>
+{{end}}

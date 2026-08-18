@@ -8,6 +8,7 @@ package files
 
 import (
 	"errors"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -17,17 +18,131 @@ import (
 	"unicode/utf8"
 )
 
-// Service browses a filesystem rooted at Root.
+// Service browses a filesystem rooted at Root. Writes (when enabled) are
+// confined to WriteRoots.
 type Service struct {
-	Root string // host filesystem root ("/" or "/host")
+	Root       string   // host filesystem root ("/" or "/host")
+	Writable   bool     // master switch for edit/upload/delete
+	WriteRoots []string // host-absolute prefixes writes are allowed under
 }
 
-// New builds a file service rooted at root.
-func New(root string) *Service {
+// Errors surfaced to callers.
+var (
+	ErrWritesDisabled = errors.New("file writing is disabled")
+	ErrNotWritable    = errors.New("path is outside the writable area (/etc, /var)")
+	ErrRestricted     = errors.New("file is restricted")
+)
+
+// New builds a file service rooted at root. When writable, edit/upload/delete
+// are permitted under /etc and /var only.
+func New(root string, writable bool) *Service {
 	if root == "" {
 		root = "/"
 	}
-	return &Service{Root: root}
+	return &Service{Root: root, Writable: writable, WriteRoots: []string{"/etc", "/var"}}
+}
+
+// CanWrite reports whether a path may be created/modified/deleted (writes
+// enabled, inside a write root, and not a restricted secret).
+func (s *Service) CanWrite(userPath string) bool {
+	clean := cleanUser(userPath)
+	return s.Writable && s.inWriteRoot(clean) && !isSensitive(clean)
+}
+
+func (s *Service) inWriteRoot(clean string) bool {
+	for _, root := range s.WriteRoots {
+		if clean == root || strings.HasPrefix(clean, root+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+// Save overwrites an existing text file's content (mode/owner preserved).
+func (s *Service) Save(userPath, content string) error {
+	clean := cleanUser(userPath)
+	if err := s.checkWrite(clean); err != nil {
+		return err
+	}
+	real := filepath.Join(s.Root, clean)
+	fi, err := os.Stat(real)
+	if err != nil {
+		return err
+	}
+	if fi.IsDir() {
+		return errors.New("is a directory")
+	}
+	return os.WriteFile(real, []byte(content), fi.Mode().Perm())
+}
+
+// Upload writes an uploaded file into a directory (basename only; capped size).
+func (s *Service) Upload(dirPath, filename string, src io.Reader, maxBytes int64) (string, error) {
+	cleanDir := cleanUser(dirPath)
+	name := filepath.Base(filepath.Clean("/" + filename))
+	if name == "." || name == "/" || name == "" {
+		return "", errors.New("invalid filename")
+	}
+	dest := cleanUser(cleanDir + "/" + name)
+	if err := s.checkWrite(dest); err != nil {
+		return "", err
+	}
+	if di, err := os.Stat(filepath.Join(s.Root, cleanDir)); err != nil || !di.IsDir() {
+		return "", errors.New("target is not a directory")
+	}
+	real := filepath.Join(s.Root, dest)
+	f, err := os.OpenFile(real, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	n, err := io.Copy(f, io.LimitReader(src, maxBytes+1))
+	if err != nil {
+		return "", err
+	}
+	if n > maxBytes {
+		os.Remove(real)
+		return "", errors.New("file exceeds the size limit")
+	}
+	return dest, nil
+}
+
+// Delete removes a file or empty directory within the writable area.
+func (s *Service) Delete(userPath string) error {
+	clean := cleanUser(userPath)
+	if err := s.checkWrite(clean); err != nil {
+		return err
+	}
+	return os.Remove(filepath.Join(s.Root, clean))
+}
+
+// checkWrite enforces the write policy for a cleaned path.
+func (s *Service) checkWrite(clean string) error {
+	if !s.Writable {
+		return ErrWritesDisabled
+	}
+	if !s.inWriteRoot(clean) {
+		return ErrNotWritable
+	}
+	if isSensitive(clean) {
+		return ErrRestricted
+	}
+	return nil
+}
+
+// isSensitive matches files we refuse to read or write even as root (secrets).
+func isSensitive(clean string) bool {
+	base := filepath.Base(clean)
+	switch base {
+	case "shadow", "gshadow", "shadow-", "gshadow-", "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519":
+		return true
+	}
+	if strings.HasSuffix(base, ".key") {
+		return true
+	}
+	if strings.HasPrefix(base, "ssh_host_") && strings.HasSuffix(base, "_key") {
+		return true
+	}
+	return false
 }
 
 // Entry is a directory entry.
@@ -114,6 +229,9 @@ type FileView struct {
 // are reported (Binary=true) without content.
 func (s *Service) Read(userPath string, maxBytes int64) (FileView, error) {
 	path := cleanUser(userPath)
+	if isSensitive(path) {
+		return FileView{}, ErrRestricted
+	}
 	real := filepath.Join(s.Root, path)
 
 	fi, err := os.Stat(real)
