@@ -62,3 +62,19 @@ Scale (from the brand guide): Display 84/72/60/48/36/30px (Light) · H1 48 · H2
 - **Light mode is the default;** dark mode supported via `data-theme="dark"` (brand ships dark logo variants).
 - **Accent = brand blue** (`--color-accent`), amber reserved for warnings/highlights.
 - **Everything vendored & embedded** — no external fonts, CSS, or JS. Works air-gapped.
+
+## 5. Components (as built, in `web/static/css/app.css`)
+
+The UI is composed from a small, consistent set. Reuse these before inventing new ones.
+
+- **App shell** — `.app` (grid: 256px sidebar + content). `.sidebar` is a navy gradient with `.brand` (the Gateway logo), grouped nav under `.nav-label` headings (**Manage** / **Diagnostics**), active state `nav a.active` (accent left-border + tint), and a `.sidebar-footer` (user avatar + sign-out). Icons are inline stroke SVGs (24×24, `stroke-width ~1.8`).
+- **Topbar** — `.topbar`: page `<h1>` on the left, a `.device-chip` (green dot + truncated device model, full name on hover) on the right.
+- **Cards & tiles** — `.card` (white, soft border, `--shadow-sm`, 14px radius). `.tile` adds a `.tile-head` (`.ico` chip + uppercase `.label`) and a `.value`. `.grid` auto-fills `minmax(230px,1fr)`; wide tiles use `grid-column: span 2`.
+- **Metrics** — `.metric-body` (value + sparkline). `.spark` is an inline auto-scaled SVG polyline (accent stroke, `vector-effect: non-scaling-stroke`), pushed via SSE. `.meter`/`.meter-fill` is the storage/usage bar.
+- **Badges** — `.badge` is a **fixed-height (22px) 6px-radius** chip (never a full pill), `align-self:center` so it never stretches in a flex row. Variants: `--running`/`--ok` (green), `--stopped`/`--idle` (grey), `--warn` (amber), `--error` (red), `--plain` (neutral, no dot). Status variants carry a leading dot.
+- **Buttons** — `.btn` with `--primary` (accent), `--ghost` (bordered), `--danger` (red), `--sm`. Focus ring `--ring`.
+- **Tables** — `.table-wrap`/`.table-scroll` + `<table>` (uppercase muted header, row hover). `.kv` is the borderless key/value table used inside cards. `.mono` for hashes/paths, `.trunc` for long cells.
+- **Forms** — `.field` (label + input), styled `input`/`select`/`textarea` with the focus ring, `.seg` segmented control, `.callout--warn`/`--info`, `.form-error`.
+- **Auth pages** — `.auth-wrap` (centered, radial-gradient bg) + `.auth-card` + `.auth-logo`.
+- **Terminals & code** — `.logbox` (dark, monospace, scrolling, for logs), `.codeview` (light file viewer), `.editor` (textarea), `.crumbs` (file breadcrumbs), `#term` (xterm host).
+- **Live vs polled** — SSE (`sse-swap` targets) for 1s metrics/logs; htmx polling (`hx-get=/fragment/… hx-trigger="load, every Ns"`) for peripherals/cloud.

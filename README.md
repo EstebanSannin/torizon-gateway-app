@@ -1,26 +1,37 @@
 # Torizon Web Gateway (working name: Gateway Manager)
 
-An on-device, web-based management application for Toradex modules running **Torizon OS** — starting with the **Verdin** family for the **Toradex Zinnia** gateway product, but designed to be **hardware-agnostic** across Torizon.
+An on-device, web-based management application for Toradex modules running **Torizon OS** — first target the **Verdin** family for the **Toradex Zinnia** gateway product, but designed to be **hardware-agnostic** across Torizon.
 
-From a browser on the local network, an operator can:
+From a browser on the local network, an operator can manage the device without a shell:
 
-- 📊 **Inspect** the board — model, serial, OS version, CPU/RAM/storage/temperature.
-- 🌐 **Configure networking** — Ethernet, WiFi, static/DHCP, DNS (via NetworkManager), with anti-lockout safeguards.
-- 📦 **Manage containers** — list, status, logs, start/stop/restart (via the Docker engine).
-- ⬇️ **Apply offline updates** — signed Torizon Secure Offline Updates (Lockbox), from USB or upload.
+- 📊 **Dashboard** — module, OS, serial, kernel, **processor** (model/cores/freq/governor), **storage** (partitions, mount points, usage), connectivity; **live health** (CPU, memory used/total, SoC temp, uptime, network throughput) with real-time sparklines; **peripherals** (USB, block/removable media, CAN, serial, I²C/SPI/GPIO).
+- 🌐 **Network** — view interfaces and edit IPv4 (DHCP/static, gateway, DNS) via NetworkManager, with a **confirm-or-revert** anti-lockout safeguard.
+- 📦 **Containers** — list, live logs, start/stop/restart via the Docker engine.
+- 📜 **Logs** — the systemd journal + kernel log, filter by unit, streamed live.
+- 📁 **Files** — browse the filesystem; edit text / upload / delete, confined to `/etc` and `/var` (secrets blocked, audited).
+- 🖥️ **Terminal** — an in-browser SSH shell for debugging.
+- ☁️ **Torizon Cloud** — provisioning status, device identity, update state, subsystems (with the docker-compose app's containers), and whether the aktualizr + remote-access daemons are running.
+- ⬇️ **Updates** — current OS version now; signed offline (Lockbox) apply is on the roadmap.
 
 ## Design at a glance
 
-- **Single Go binary** with the UI embedded (`//go:embed`) — no separate web server, no Node runtime.
-- **Build-less frontend** — server-rendered HTML + HTMX + Alpine.js + SSE, all vendored. Works fully offline.
-- **Torizon-native host access** — NetworkManager over D-Bus, Docker over its socket, updates via aktualizr offline. No blanket `--privileged`.
-- **Product-grade security** — local accounts (argon2id), first-boot setup, HTTPS (self-signed on first boot) + mDNS discovery (`zinnia.local`), CSRF, audit log.
-- **Ships as a Torizon app** (docker-compose), baked into the OS image via TorizonCore Builder.
+- **Single Go binary** with the UI embedded (`//go:embed`) — no separate web server, no Node runtime, **no frontend build step**.
+- **Build-less, offline-first frontend** — server-rendered HTML + HTMX + Alpine.js + SSE + xterm.js, all vendored (incl. the Inter font). Works air-gapped.
+- **Torizon-native host access** — NetworkManager over D-Bus, Docker over its socket (tiny stdlib client, not the SDK), sysfs/proc reads, systemd journal & `aktualizr-info` via the host binaries. **No blanket `--privileged`.**
+- **Pure-Go, no cgo** — `modernc.org/sqlite`, `x/crypto`, `godbus`, `gorilla/websocket` — so the static binary and a future Yocto recipe stay trivial.
+- **Product-grade security** — first-boot admin (argon2id), HTTPS (self-signed on first boot), CSRF, audit log; risky features (file writes, terminal) off by default.
+
+## Deployment
+
+- **Dev:** a Torizon container with elevated host access (host networking, `/host` mount, docker/D-Bus sockets). Fast build→load→run loop.
+- **Production (planned): native via Yocto** (a bitbake recipe + systemd service). Torizon runs a single docker-compose and wipes other containers when a customer app deploys, so the gateway must run natively to always be present. The same binary runs both ways.
 
 ## Documentation
 
-- 📐 [Architecture & Specification](docs/ARCHITECTURE.md) — the full design, privilege model, feature specs, roadmap, and open decisions.
+- 📐 [Architecture & Specification](docs/ARCHITECTURE.md) — design, privilege model, feature specs, data-access patterns, roadmap.
+- 🎨 [Design System](docs/DESIGN-SYSTEM.md) — brand tokens, typography, components.
+- 🤖 [CLAUDE.md](CLAUDE.md) — knowledge base for AI-assisted contributors.
 
 ## Status
 
-**Draft — architecture phase.** See [open decisions](docs/ARCHITECTURE.md#16-open-decisions-need-your-confirmation) before implementation starts.
+**Working prototype — Phases 0–2 plus diagnostics/cloud complete and validated on a Verdin iMX8M Plus (Torizon OS 7.7.0).** Remaining: offline-update apply (Lockbox), the Yocto native build, and hardening (TOTP, BYO cert, rate-limiting, mDNS). See the [roadmap](docs/ARCHITECTURE.md#15-roadmap--phasing).

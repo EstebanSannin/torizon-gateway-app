@@ -1,8 +1,10 @@
 # Torizon Web Gateway — Architecture & Specification
 
 > Working title: **Torizon Gateway Manager** (product context: **Toradex Zinnia**, Toradex's first gateway product).
-> Status: **Draft v0.1** — architecture agreed, pending confirmation of open decisions (see §16).
+> Status: **Working prototype** — Phases 0–2 plus a Diagnostics/Cloud set and a full brand design pass, all validated on a Verdin iMX8M Plus (Torizon OS 7.7.0). Remaining: offline-update apply, Yocto native build, hardening. See §15.
 > Owner: Stefano Viola.
+>
+> This doc records the design and rationale. For the concrete current implementation (packages, conventions, data-access patterns, dev loop) see [`../CLAUDE.md`](../CLAUDE.md).
 
 ---
 
@@ -17,21 +19,27 @@ Primary goals:
 - **Single deployable artifact.** Ships as one Torizon application (docker-compose), one container, one Go binary with the UI embedded.
 - **Product-grade from day one.** Real authentication, HTTPS, signed updates, safe network changes with rollback.
 
-### Core capabilities (MVP)
+### Capabilities
 
-| # | Feature | First release |
-|---|---------|---------------|
-| 1 | **System / board info** — read-only dashboard | ✅ |
-| 2 | **Network configuration** — Ethernet/WiFi/DNS via NetworkManager | ✅ |
-| 3 | **Container management** — list/status/logs, start/stop/restart | ✅ |
-| 4 | **Offline updates** — Torizon Secure Offline Updates (Lockbox) | ✅ |
+| Feature | Status |
+|---------|--------|
+| **System / board info** — module, OS, serial, kernel, **processor**, storage (partitions/mounts/usage), connectivity | ✅ |
+| **Live health** — CPU / memory / SoC temp / uptime / network throughput, with sparklines (1s SSE) | ✅ |
+| **Peripherals** — USB, block/removable media, CAN, serial, I²C/SPI/GPIO (sysfs, polled) | ✅ |
+| **Network configuration** — view + IPv4 edit via NetworkManager, confirm-or-revert anti-lockout | ✅ |
+| **Container management** — list / live logs / start / stop / restart | ✅ |
+| **Logs** — systemd journal + kernel, filter by unit, realtime | ✅ |
+| **File explorer** — browse (read-only) + edit/upload/delete confined to /etc,/var | ✅ |
+| **Web terminal** — in-browser SSH shell | ✅ |
+| **Torizon Cloud** — provisioning, device, update state, subsystems, daemon status | ✅ |
+| **Auth** — first-boot setup, argon2id, sessions, CSRF, audit | ✅ |
+| **Offline updates** — Torizon Secure Offline Updates (Lockbox) apply | ⏳ Phase 3 |
 
 ---
 
 ## 2. Non-goals (for MVP)
 
-- Fleet / multi-device management (that is Toradex Cloud's job — this app manages **one** device).
-- Cloud connectivity, telemetry export, or remote access tunneling.
+- Fleet / multi-device management (that is Torizon Cloud's job — this app manages **one** device). We **display** this device's Torizon Cloud/OTA status (read-only) but do not provision, enroll, or push telemetry.
 - A general-purpose container *authoring* tool (no image building on-device).
 - User/role management beyond a single admin account (RBAC is a later phase).
 - Internationalization (English only for MVP; strings externalized to allow it later).
@@ -126,51 +134,64 @@ The app needs to *read* host state and *mutate* network + containers + updates. 
 - **All state-changing actions are audited** (who, what, when) to the local store.
 - **Docker socket access from a non-root container:** the socket is `root:docker`, so the container process must be in the host's `docker` group. On-device we run the container as the device user and add the host docker GID via compose `group_add` (validated on Torizon: gid 990). The socket-proxy backlog item would remove this exposure.
 
-### compose sketch
+### compose (current dev deployment)
+As features grew (peripherals need host `/sys/class/net` for CAN; logs/cloud need the host journal + `aktualizr-info`; the file explorer writes `/etc`,`/var`), the dev container gained broader host access. This is the **dev** shape; **native (Yocto) production** needs none of these mounts.
+
 ```yaml
 services:
   gateway-manager:
-    image: registry/toradex/gateway-manager:latest
+    image: torizon-gateway:dev
     restart: unless-stopped
-    ports: ["443:8443"]
+    network_mode: host            # host interfaces (CAN) in /sys/class/net; cert auto-detects LAN IP; binds :8443
+    user: "0:0"                   # root — required to write root-owned /etc,/var and read /var/sota
+    environment:
+      - GATEWAY_DATA_DIR=/data
+      - GATEWAY_HOST_ROOT=/host
+      - GATEWAY_FILES_WRITABLE=1   # off by default
+      - GATEWAY_TERMINAL_ENABLED=1 # off by default
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
-      - /proc/device-tree:/host/device-tree:ro
-      - /etc/os-release:/host/os-release:ro
-      - gateway-data:/data
-      - /var/sota/offline-updates:/host/offline-updates   # path TBD per Torizon
-    environment:
-      - GATEWAY_DATA_DIR=/data
-volumes:
-  gateway-data:
+      - /:/host:ro                 # whole host FS (mount table, statfs, journal, aktualizr-info, browsing)
+      - /etc:/host/etc:rw          # confined writable area
+      - /var:/host/var:rw          # confined writable area
+      - ./data:/data
 ```
+`group_add` for the host `docker` (990) and `systemd-journal` (988) GIDs is used instead of `user: 0` when running unprivileged (read-only feature set). Self-container detection reads the real container id from `/proc/self/mountinfo` (hostname is the host's under host networking).
 
 ---
 
 ## 6. Backend design (Go)
 
-### Layout
+### Layout (as built)
 ```
-/cmd/gateway-manager        main(): wiring, config, graceful shutdown
-/internal/httpserver        router, middleware (auth, logging, CSRF), TLS, SSE hub
-/internal/auth              sessions, password hashing (argon2id), first-boot setup
-/internal/hal               board-info interface + toradex/generic impls
-/internal/network           NetworkManager D-Bus client + safe-apply logic
-/internal/containers        Docker client wrapper
-/internal/updates           offline-update orchestration + status
-/internal/store             persistence (users, settings, audit) — SQLite
-/internal/config            env/config loading
-/web                        HTML templates, css, vendored htmx/alpine, //go:embed
+/cmd/gateway-manager   main(): config → HAL → store → services → TLS → HTTPS → graceful shutdown
+/internal/httpserver   router (stdlib ServeMux), auth+CSRF middleware, TLS, SSE, template render, handlers_*.go
+/internal/config       env config (all GATEWAY_* vars) + defaults
+/internal/hal          BoardInfo (toradex/generic), capability probe, host-root-aware path resolution
+/internal/auth         first-boot setup, argon2id (hash.go), sessions
+/internal/store        SQLite (modernc): users, sessions, audit
+/internal/network      NetworkManager over D-Bus (godbus): read + IPv4 edit w/ checkpoint confirm-or-revert
+/internal/containers   Docker Engine via a tiny stdlib HTTP client over the socket: list/logs/start/stop/restart
+/internal/sysinfo      pure-Go sysfs/proc readers: disk, peripherals, cpu, net counters, default iface
+/internal/logs         systemd journal + kernel via journalctl (host binary in the container)
+/internal/files        host FS browse (traversal-safe) + edit/upload/delete confined to /etc,/var
+/internal/terminal     web SSH shell: x/crypto/ssh to localhost, WebSocket-proxied (gorilla)
+/internal/cloud        Torizon Cloud/OTA via aktualizr-info (host binary) + process status via /proc
+/internal/updates      [roadmap] offline Lockbox apply
+/web                   templates, css, vendored htmx/alpine/xterm/inter, //go:embed
 ```
 
-### Key choices
-- **Router:** stdlib `net/http` + `chi` (lightweight, idiomatic).
-- **D-Bus:** `github.com/godbus/dbus` for NetworkManager.
-- **Docker:** official `github.com/docker/docker/client` against the socket.
-- **Store:** **SQLite** (via `modernc.org/sqlite`, pure-Go, no cgo) on the persistent volume. Small, transactional, fits users + settings + audit log.
-- **Concurrency:** an **SSE hub** fans out live updates (metrics, container status, log lines, update progress) to connected browsers.
-- **Config source of truth:** the *host* is authoritative for network/containers. The app's SQLite store holds only app-owned data (accounts, preferences, audit). We never keep a second copy of NM config to drift.
+### Key choices (as built)
+- **Router:** stdlib `net/http.ServeMux` with method+pattern routes (Go 1.22+). No chi — the middleware need stayed small (a `requireAuth` wrapper).
+- **Docker:** a **~150-line stdlib `net/http` client** over the unix socket (`internal/containers`), **not** the `docker/docker` SDK — the SDK's dependency tree is huge and we only need a handful of endpoints. Keeps the binary small (embedded target).
+- **D-Bus:** `github.com/godbus/dbus/v5` for NetworkManager (read + checkpoint-based safe apply).
+- **WebSocket:** `github.com/gorilla/websocket` for the terminal.
+- **Store:** **SQLite** via `modernc.org/sqlite` (pure-Go, no cgo). WAL. Users + sessions + audit.
+- **Host binaries via the loader:** `journalctl` and `aktualizr-info` aren't in the distroless image, so in the container they're run via the host dynamic loader against the host FS (`$hostRoot/lib/ld-*.so --library-path … $hostRoot/usr/bin/<bin>`), pointed at the host journal / `/host/var/sota`. Native runs them directly. See CLAUDE.md → data-access patterns.
+- **Live data:** **SSE** for high-frequency streams (`/sse/metrics` sends value+sparkline fragments at 1s; logs, journal, terminal) and **htmx polling** for periodic HTML fragments (peripherals 4s, cloud 15s). No central hub — each stream is its own handler.
+- **Config source of truth:** the *host* is authoritative for network/containers/updates. The SQLite store holds only app-owned data (accounts, sessions, audit).
+- **Deps are all pure-Go / no cgo** so the static binary and Yocto recipe stay trivial. Module Go 1.25+, Dockerfile builds on `golang:1.26`.
 
 ---
 
@@ -300,11 +321,14 @@ Torizon OS runs a **single docker-compose**, managed by an aktualizr secondary. 
 ```
 torizon-gateway-app/
 ├── cmd/gateway-manager/         main.go
-├── internal/
-│   ├── auth/  hal/  network/  containers/  updates/  store/  httpserver/  config/
+├── internal/                    (see §6 for the full layout)
+│   ├── config/ hal/ auth/ store/ httpserver/
+│   ├── network/ containers/ sysinfo/ logs/ files/ terminal/ cloud/ updates/
 ├── web/
-│   ├── templates/               *.html (server-rendered + HTMX fragments)
-│   ├── static/                  css, vendored htmx.min.js, alpine.min.js
+│   ├── templates/               base.html + <page>.html + fragment_*.html
+│   ├── static/css/              tokens.css + app.css
+│   ├── static/brand/            Torizon SVGs + gateway lockup
+│   ├── static/vendor/           htmx, htmx-ext-sse, alpine, xterm/, inter/
 │   └── embed.go                 //go:embed
 ├── deploy/
 │   ├── docker-compose.yml       Torizon app definition
@@ -331,11 +355,19 @@ System/board info dashboard (HAL) incl. serial (device-tree) + data storage · c
 Auth (setup/login/sessions/CSRF/audit) · Network read-only · **Network editing with confirm-or-revert anti-lockout** (NM checkpoint auto-rollback) · container **start/stop/restart** (self-guardrail, CSRF, audit). All validated on-device.
 Finding: NetworkManager **writes are permitted from the unprivileged container** (polkit allows the device user), so network mutation does not by itself force the native deployment — but the single-compose wipe (§13) still does for persistence.
 
+**Phase 2.5 — Diagnostics, Cloud & Design** — ✅ _complete (validated on-device)_
+- **Dashboard depth:** processor tile (model/cores/freq/governor), storage partitions+mounts+usage, connectivity, and a **live** health section with sparklines (1s SSE) + network throughput; **peripherals** (USB, block/removable, CAN, serial, I²C/SPI/GPIO) via sysfs, polled.
+- **Logs:** systemd journal + kernel via `journalctl`, filter by unit, realtime SSE.
+- **Files:** host-FS browser (traversal-safe read-only) + edit/upload/delete confined to `/etc`,`/var` (secrets denylist, off by default).
+- **Terminal:** in-browser SSH shell (xterm.js ↔ WebSocket ↔ SSH to localhost, off by default).
+- **Torizon Cloud:** provisioning + device + update state + subsystems (expandable containers) via `aktualizr-info`; aktualizr & remote-access daemon status via `/proc`.
+- **Design:** full brand pass — vendored Inter, navy console shell with grouped nav (Manage/Diagnostics), metric tiles, uniform badges, sparklines. See [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md).
+
 **Phase 3 — offline updates**
 Lockbox upload/USB → stage → trigger aktualizr offline → progress/rollback reporting.
 
 **Phase 4 — hardening & polish**
-TOTP 2FA · BYO TLS cert · RBAC groundwork · i18n scaffolding · backup/restore.
+TOTP 2FA · BYO TLS cert · login rate-limit/lockout · **mDNS advertising** (so `zinnia.local` actually resolves) · RBAC groundwork · i18n scaffolding · backup/restore · parse-once template cache.
 
 ### Backlog (deferred, revisit at the noted phase)
 
