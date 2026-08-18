@@ -1,0 +1,9 @@
+{{define "content"}}
+<div class="page-header">
+  <p class="muted" style="margin:0">Provisioning and OTA status from the on-device update client (aktualizr).</p>
+  <span class="muted" style="font-size:0.8rem">auto-refresh</span>
+</div>
+<div hx-get="/fragment/cloud" hx-trigger="load, every 15s" hx-swap="innerHTML">
+  <div class="empty">Loading cloud status…</div>
+</div>
+{{end}}

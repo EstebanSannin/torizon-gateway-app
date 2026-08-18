@@ -1,0 +1,72 @@
+{{define "cloud"}}
+{{if not .Info.Available}}
+  <div class="card">
+    <p style="margin-top:0">Cloud / OTA status is unavailable — <code>aktualizr-info</code> could not be read.</p>
+    <p class="muted" style="margin-bottom:0">This reads the host SOTA storage (<code>/var/sota</code>); the app must run as root with the host mounted.</p>
+  </div>
+{{else}}
+  <div class="grid">
+    <div class="card tile">
+      <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 18a4 4 0 01-.5-7.97A5.5 5.5 0 0117.5 9.5 4 4 0 0117 18z"/></svg></span><span class="label">Provisioning</span></div>
+      <div>{{if .Info.Provisioned}}<span class="badge badge--ok">provisioned</span>{{else}}<span class="badge badge--warn">not provisioned</span>{{end}}
+      {{if .Info.FetchedMetadata}}<span class="badge badge--plain">metadata ok</span>{{end}}</div>
+    </div>
+    <div class="card tile" style="grid-column: span 2;">
+      <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><span class="label">Device</span></div>
+      <div class="value sm">{{if .Info.DeviceName}}{{.Info.DeviceName}}{{else}}—{{end}}</div>
+      <div class="sub mono">{{.Info.DeviceID}}</div>
+    </div>
+    <div class="card tile">
+      <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg></span><span class="label">Update state</span></div>
+      <div>
+        {{if eq .Info.State "up-to-date"}}<span class="badge badge--ok">up to date</span>
+        {{else if eq .Info.State "update-available"}}<span class="badge badge--warn">update available</span>
+        {{else if eq .Info.State "updating"}}<span class="badge badge--warn">updating…</span>
+        {{else}}<span class="badge badge--plain">unknown</span>{{end}}
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title"><h2>Subsystems</h2><span class="rule"></span></div>
+  <div class="stack">
+    {{range .Info.Subsystems}}
+    <div class="card">
+      <div class="page-header" style="margin:0">
+        <div style="display:flex; align-items:center; gap:10px">
+          <strong>{{.HardwareID}}</strong>
+          {{if .IsPrimary}}<span class="badge badge--plain">OS</span>{{else}}<span class="badge badge--plain">{{.Kind}}</span>{{end}}
+        </div>
+        {{if .HasTarget}}
+          {{if .UpToDate}}<span class="badge badge--ok">up to date</span>{{else}}<span class="badge badge--warn">update available</span>{{end}}
+        {{else}}<span class="badge badge--idle">no target</span>{{end}}
+      </div>
+      {{if or .InstalledName .InstalledHash}}
+      <table class="kv" style="margin-top:10px">
+        {{if .InstalledName}}<tr><th>Installed</th><td>{{.InstalledName}}</td></tr>{{end}}
+        {{if .InstalledHash}}<tr><th>{{if .IsPrimary}}Version{{else}}Image hash{{end}}</th><td><span class="mono">{{slice .InstalledHash 0 16}}…</span></td></tr>{{end}}
+        {{if and .DesiredHash (not .UpToDate)}}<tr><th>Cloud wants</th><td><span class="mono">{{slice .DesiredHash 0 16}}…</span></td></tr>{{end}}
+      </table>
+      {{end}}
+      {{if eq .Kind "docker-compose"}}
+      <details style="margin-top:10px">
+        <summary>Containers ({{len $.Containers}})</summary>
+        <table class="kv" style="margin-top:8px">
+          {{range $.Containers}}
+          <tr>
+            <th style="width:40%">{{.Name}}</th>
+            <td>
+              {{if eq .State "running"}}<span class="badge badge--running">running</span>{{else}}<span class="badge badge--stopped">{{.State}}</span>{{end}}
+              <span class="mono muted" style="font-size:0.75rem"> {{.Image}}</span>
+            </td>
+          </tr>
+          {{else}}<tr><td class="muted">No containers.</td></tr>{{end}}
+        </table>
+      </details>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+
+  {{if .Info.LastCorrelation}}<p class="muted" style="margin-top:14px; font-size:0.8rem">Last update operation: <span class="mono">{{.Info.LastCorrelation}}</span></p>{{end}}
+{{end}}
+{{end}}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/toradex/torizon-gateway-app/internal/auth"
+	"github.com/toradex/torizon-gateway-app/internal/cloud"
 	"github.com/toradex/torizon-gateway-app/internal/config"
 	"github.com/toradex/torizon-gateway-app/internal/containers"
 	"github.com/toradex/torizon-gateway-app/internal/files"
@@ -34,6 +35,7 @@ type Server struct {
 	syslogs     *logs.Service
 	files       *files.Service
 	terminal    *terminal.Service
+	cloud       *cloud.Service
 	mux         *http.ServeMux
 
 	pendMu  sync.Mutex
@@ -48,6 +50,7 @@ func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, net *n
 		syslogs:     logs.New(cfg.HostRoot),
 		files:       files.New(cfg.HostRoot, cfg.FilesWritable),
 		terminal:    terminal.New(cfg.TerminalEnabled, cfg.TerminalSSHAddr),
+		cloud:       cloud.New(cfg.HostRoot, cfg.DataDir),
 		mux:         http.NewServeMux(),
 		pending:     make(map[string]pendingChange),
 	}
@@ -89,6 +92,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /containers/{id}/stop", s.requireAuth(s.handleContainerAction("stop")))
 	s.mux.HandleFunc("POST /containers/{id}/restart", s.requireAuth(s.handleContainerAction("restart")))
 	s.mux.HandleFunc("GET /updates", s.requireAuth(s.handleUpdates))
+	s.mux.HandleFunc("GET /cloud", s.requireAuth(s.handleCloudPage))
 	s.mux.HandleFunc("GET /logs", s.requireAuth(s.handleLogsPage))
 	s.mux.HandleFunc("GET /files", s.requireAuth(s.handleFiles))
 	s.mux.HandleFunc("GET /files/view", s.requireAuth(s.handleFileView))
@@ -101,6 +105,7 @@ func (s *Server) routes() {
 
 	// HTML fragments (htmx) — protected.
 	s.mux.HandleFunc("GET /fragment/peripherals", s.requireAuth(s.handlePeripheralsFragment))
+	s.mux.HandleFunc("GET /fragment/cloud", s.requireAuth(s.handleCloudFragment))
 	s.mux.HandleFunc("GET /fragment/logbox", s.requireAuth(s.handleLogboxFragment))
 
 	// Live streams (SSE) — protected.

@@ -194,6 +194,9 @@ input:focus, select:focus { outline: none; border-color: var(--color-accent); bo
 .auth-form { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
 .auth-form .btn--primary { justify-content: center; padding: 11px; margin-top: 4px; }
 
+details > summary { cursor: pointer; color: var(--color-accent-strong); font-weight: 600; font-size: 0.85rem; user-select: none; }
+details > summary:hover { text-decoration: underline; }
+
 /* ============ File explorer ============ */
 .crumbs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.9rem; }
 .crumbs .sep { color: var(--color-text-muted); }
