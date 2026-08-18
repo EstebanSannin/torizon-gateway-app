@@ -37,12 +37,25 @@
     </div>
     <div class="value sm">{{if .Board.SerialNumber}}{{.Board.SerialNumber}}{{else}}—{{end}}</div>
   </div>
-  <div class="card tile">
+  <div class="card tile" style="grid-column: span 2;">
     <div class="tile-head">
       <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg></span>
       <span class="label">Kernel</span>
     </div>
-    <div class="value sm">{{.Board.KernelVersion}}</div>
+    <div class="k-top">
+      <span class="k-rel">{{.Kernel.Release}}</span>
+      {{if .Kernel.Arch}}<span class="k-badge">{{.Kernel.Arch}}</span>{{end}}
+      {{if .Kernel.SMP}}<span class="k-badge">SMP</span>{{end}}
+      {{if .Kernel.Preempt}}<span class="k-badge">{{.Kernel.Preempt}}</span>{{end}}
+    </div>
+    <dl class="k-kv">
+      {{if .Kernel.Compiler}}<dt>Toolchain</dt><dd>{{.Kernel.Compiler}}{{if .Kernel.Triple}} <span class="k-dim">· {{.Kernel.Triple}}</span>{{end}}</dd>{{end}}
+      {{if .Kernel.Linker}}<dt>Binutils</dt><dd>{{.Kernel.Linker}}</dd>{{end}}
+      {{if .Kernel.Build}}<dt>Build</dt><dd class="k-mono">{{.Kernel.Build}}</dd>{{end}}
+      {{if .Kernel.BuildDate}}<dt>Built</dt><dd>{{.Kernel.BuildDate}}</dd>{{end}}
+      {{if .Kernel.Builder}}<dt>Builder</dt><dd class="k-mono k-dim">{{.Kernel.Builder}}</dd>{{end}}
+    </dl>
+    {{if .Kernel.Raw}}<details class="k-raw"><summary>Raw /proc/version</summary><pre>{{.Kernel.Raw}}</pre></details>{{end}}
   </div>
   <div class="card tile">
     <div class="tile-head">

@@ -158,6 +158,7 @@ type dashData struct {
 	CPUMaxHuman    string
 	CPUMaxMHz      int
 	FreqMinPct     float64 // min freq as % of max (the idle-floor marker)
+	Kernel         hal.KernelInfo
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
@@ -184,6 +185,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	if data.CPU.MaxKHz > 0 {
 		data.FreqMinPct = float64(data.CPU.MinKHz) / float64(data.CPU.MaxKHz) * 100
 	}
+	data.Kernel = hal.Kernel()
 	render(w, "dashboard.html", data)
 }
 
