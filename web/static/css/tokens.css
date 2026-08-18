@@ -152,4 +152,14 @@
   --color-sidebar-text:    var(--tn-text-primary-light);
   --color-sidebar-active:  var(--tn-primary-light);
   --gauge-track:           #0d3a68;
+
+  /* Complete the dark palette (these would otherwise inherit light values). */
+  --color-border-strong:   #14477d;
+  --color-accent-strong:   #39A9FF;
+  --color-accent-soft:     #0d3a68;
+
+  --status-ok:       #3FBF77; --status-ok-bg:    #0E3A24;
+  --status-warn:     #E0A54A; --status-warn-bg:  #3A2C10;
+  --status-danger:   #F16A6A; --status-danger-bg:#3A1414;
+  --status-idle:     #93A8C2; --status-idle-bg:  #0F2F52;
 }
