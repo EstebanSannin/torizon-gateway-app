@@ -114,6 +114,11 @@ func (s *Service) Get(ctx context.Context) Info {
 	for i := range info.Subsystems {
 		ss := &info.Subsystems[i]
 		ss.DesiredHash = desired[ss.HardwareID]
+		// Tracked when the server has a target for it or aktualizr reports an
+		// installed image. Basing this on installed/desired (not the primary's
+		// transient "running version" line) keeps the badge stable across the
+		// brief window after an aktualizr restart.
+		ss.HasTarget = ss.InstalledHash != "" || ss.DesiredHash != ""
 		if ss.DesiredHash != "" && ss.InstalledHash != "" {
 			ss.UpToDate = strings.EqualFold(ss.DesiredHash, ss.InstalledHash)
 			if !ss.UpToDate {
@@ -196,15 +201,14 @@ func parseInfo(out string) Info {
 }
 
 // parseDirectorTargets maps hardwareId -> sha256 from director-targets JSON.
-// Parsed leniently (no struct) to tolerate schema variation.
+// Parsed leniently (no struct) to tolerate schema variation. Each target's
+// custom.ecuIdentifiers.<serial>.hardwareId sits before its sibling
+// hashes.sha256, so splitting on "custom": keeps the pair in one segment.
 func parseDirectorTargets(j string) map[string]string {
 	out := map[string]string{}
-	// crude but robust: for each target object, find its hardwareIds and sha256.
-	// Split on "\"hashes\"" boundaries is brittle; instead scan with a tiny state.
 	dec := strings.NewReplacer("\n", "", " ", "").Replace(j)
-	// find every hardwareIds":["X"] ... sha256":"Y" pair within the same target.
 	for _, seg := range strings.Split(dec, "\"custom\":") {
-		hw := between(seg, `"hardwareIds":["`, `"`)
+		hw := between(seg, `"hardwareId":"`, `"`) // singular, under ecuIdentifiers
 		sha := between(seg, `"sha256":"`, `"`)
 		if hw != "" && sha != "" {
 			out[hw] = sha
