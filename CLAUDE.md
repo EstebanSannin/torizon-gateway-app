@@ -44,7 +44,8 @@ web/static/css/               tokens.css (brand; light + full dark palette) + ap
 web/static/js/                app JS: dashboard.js (live gauges/chart), wifi.js (connect dialog) — vanilla, embedded
 web/static/brand/             Official Torizon SVGs + torizon-gateway-logo[-dark].svg (product lockup)
 web/static/vendor/            htmx, htmx-ext-sse, alpine, xterm/, inter/ (all committed)
-deploy/                       Dockerfile (multi-arch, golang:1.26 → distroless) + docker-compose.yml (reference)
+docker-compose.yml            Official deploy compose (published image, Torizon Cloud / any device)
+deploy/                       Dockerfile (multi-arch, golang:1.26 → distroless) + docker-compose.yml (annotated reference for custom builds)
 docs/                         ARCHITECTURE.md, DESIGN-SYSTEM.md
 ```
 

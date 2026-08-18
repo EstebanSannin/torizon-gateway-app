@@ -27,11 +27,18 @@ From a browser on the local network, an operator can manage the device without a
 - **Dev:** a Torizon container with elevated host access (host networking, `/host` mount, docker/D-Bus sockets). Fast build→load→run loop.
 - **Production (planned): native via Yocto** (a bitbake recipe + systemd service). Torizon runs a single docker-compose and wipes other containers when a customer app deploys, so the gateway must run natively to always be present. The same binary runs both ways.
 
-**Container images** — published multi-arch (linux/arm64, linux/arm/v7, linux/amd64) at [`samnite/torizon-gateway`](https://hub.docker.com/r/samnite/torizon-gateway):
+**Container images** — published multi-arch (linux/arm64, linux/arm/v7, linux/amd64) at [`samnite/torizon-gateway`](https://hub.docker.com/r/samnite/torizon-gateway), so the same image runs on any Torizon module.
 
-```bash
-docker pull samnite/torizon-gateway:latest
-```
+**Deploy on any Torizon OS device** with the ready-to-use [`docker-compose.yml`](docker-compose.yml) at the repo root:
+
+- **Torizon Cloud:** add `docker-compose.yml` as a package and deploy it to your device or fleet from the platform.
+- **Manually on a device:**
+
+  ```bash
+  docker compose up -d      # then open https://<device-ip>:8443
+  ```
+
+Power features (file writes, web terminal) are **off by default** — enable them via the commented switches in the compose. `deploy/docker-compose.yml` is an annotated reference for custom builds (`${REGISTRY}/${TAG}`).
 
 ## Documentation
 

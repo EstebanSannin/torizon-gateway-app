@@ -1,0 +1,65 @@
+# Torizon Gateway — official deployment.
+#
+# Deploy on ANY Torizon OS device (the image is multi-arch: arm64, arm/v7, amd64):
+#   • Torizon Cloud: add this docker-compose.yml as a package, then deploy it to
+#     your device(s) / fleet from the platform.
+#   • Manually on a device:  docker compose up -d
+#
+# Torizon runs a single managed compose project, so this IS the device's app.
+#
+# Privilege model: NO blanket --privileged — only the specific host access the
+# features need. The Docker socket is root-equivalent, so treat this as an admin
+# console and expose it only on trusted networks. See docs/ARCHITECTURE.md §5.
+
+services:
+  gateway-manager:
+    image: samnite/torizon-gateway:0.1.0   # or :latest for the rolling build
+    container_name: torizon-gateway
+    restart: unless-stopped
+
+    # Host networking: required to see host interfaces (CAN, Wi-Fi) under
+    # /sys/class/net and to let the self-signed cert auto-detect the LAN IP.
+    # The app binds :8443 directly on the host (open https://<device-ip>:8443).
+    network_mode: host
+
+    # Least-privilege: join the host groups for the Docker socket and the systemd
+    # journal by NUMERIC GID (names don't resolve in a distroless image). These
+    # are the Torizon OS defaults — verify with: getent group docker systemd-journal
+    group_add:
+      - "990"   # docker          → container management
+      - "988"   # systemd-journal → Logs (journal read)
+
+    environment:
+      - GATEWAY_DATA_DIR=/data
+      - GATEWAY_HOST_ROOT=/host          # where the host "/" is visible in-container
+      - GATEWAY_HOSTNAME=torizon-gateway # cert SAN / display name; set to taste
+      # --- Optional power features (OFF by default) ---
+      # File edit/upload/delete confined to /etc,/var (secrets blocked). Requires
+      # the two rw mounts below AND running the container as root (user: "0:0").
+      # - GATEWAY_FILES_WRITABLE=1
+      # In-browser SSH terminal (127.0.0.1:22; user supplies board creds; audited).
+      # - GATEWAY_TERMINAL_ENABLED=1
+      # Extra TLS SANs if the host IP isn't auto-detected (delete data/tls/* to regen).
+      # - GATEWAY_TLS_SANS=192.168.1.50,gateway.lan
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock               # container mgmt
+      - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket # NetworkManager
+      - /:/host:ro                                              # host FS (read-only)
+      # Enable these two (with GATEWAY_FILES_WRITABLE=1 + user "0:0") for file writes:
+      # - /etc:/host/etc:rw
+      # - /var:/host/var:rw
+      - gateway-data:/data                                      # SQLite DB + TLS cert
+
+    # Uncomment to run as root — needed ONLY for the file-write feature above.
+    # user: "0:0"
+
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/gateway-manager", "-healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  gateway-data:

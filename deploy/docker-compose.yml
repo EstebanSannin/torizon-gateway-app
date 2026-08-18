@@ -1,6 +1,11 @@
-# Torizon Gateway — Torizon application definition.
-# Deployed as a Torizon app; bake into the OS image via TorizonCore Builder so
-# it's present on first boot. See docs/ARCHITECTURE.md §5 (privilege model) & §13.
+# Torizon Gateway — ANNOTATED REFERENCE compose (custom builds / OS-image bake).
+#
+# ➜ For a ready-to-deploy file (published multi-arch image, Torizon Cloud), use
+#   the repo-root ../docker-compose.yml instead. This one uses ${REGISTRY}/${TAG}
+#   templating for your own builds and documents every knob in detail.
+#
+# Bake into the OS image via TorizonCore Builder so it's present on first boot.
+# See docs/ARCHITECTURE.md §5 (privilege model) & §13.
 #
 # ⚠ Privilege model: NO blanket --privileged. Only the specific mounts below.
 #   The Docker socket is root-equivalent on the host — see the "socket proxy"
