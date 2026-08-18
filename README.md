@@ -4,8 +4,9 @@ An on-device, web-based management application for Toradex modules running **Tor
 
 From a browser on the local network, an operator can manage the device without a shell:
 
-- 📊 **Dashboard** — module, OS, serial, kernel, **processor** (model/cores/freq/governor), **storage** (partitions, mount points, usage), connectivity; **live health** (CPU, memory used/total, SoC temp, uptime, network throughput) with real-time sparklines; **peripherals** (USB, block/removable media, CAN, serial, I²C/SPI/GPIO).
-- 🌐 **Network** — view interfaces and edit IPv4 (DHCP/static, gateway, DNS) via NetworkManager, with a **confirm-or-revert** anti-lockout safeguard.
+- 📊 **Dashboard** — module, OS, serial, a detailed **kernel** card (release, arch, SMP/PREEMPT, toolchain, binutils, build date from `/proc/version`), **processor** (SoC model/core/arch, live frequency bar/governor), **storage** (partitions, mount points, usage), connectivity; **live health** (CPU utilization, memory, SoC temp as color-zoned **radial gauges**; uptime/load; network as a smooth **area chart**) over a 1s SSE stream; **peripherals** (USB, block/removable media, **CAN** with bitrate/controller-state/errors, serial, I²C/SPI/GPIO).
+- 🌐 **Network** — view interfaces and edit IPv4 (DHCP/static, gateway, DNS) via NetworkManager with a **confirm-or-revert** anti-lockout safeguard; **Wi-Fi station management** — pick the interface, scan, click a network to connect (passphrase dialog), see the connected-details panel, disconnect, and forget.
+- 🎨 **Light / dark theme** — toggle in the top bar, remembered across sessions.
 - 📦 **Containers** — list, live logs, start/stop/restart via the Docker engine.
 - 📜 **Logs** — the systemd journal + kernel log, filter by unit, streamed live.
 - 📁 **Files** — browse the filesystem; edit text / upload / delete, confined to `/etc` and `/var` (secrets blocked, audited).

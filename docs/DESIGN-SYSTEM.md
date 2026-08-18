@@ -59,7 +59,7 @@ Scale (from the brand guide): Display 84/72/60/48/36/30px (Light) · H1 48 · H2
 
 ## 4. Principles for this UI
 - **Clean, information-dense, calm.** It's an industrial device console, not a marketing page.
-- **Light mode is the default;** dark mode supported via `data-theme="dark"` (brand ships dark logo variants).
+- **Light mode is the default;** dark mode is a **user toggle** in the top bar (sun/moon), persisted in `localStorage` (`gw-theme`) and applied before first paint by an inline `<head>` script (no flash). It sets `data-theme="dark"` on `<html>`. `tokens.css` carries a **complete** dark palette — every semantic token (including `--color-accent-soft/-strong`, `--color-border-strong`, and the `--status-*` chip backgrounds) is remapped, so components styled through tokens work in both themes. Never style a component with a raw color that only reads in one theme.
 - **Accent = brand blue** (`--color-accent`), amber reserved for warnings/highlights.
 - **Everything vendored & embedded** — no external fonts, CSS, or JS. Works air-gapped.
 
@@ -68,12 +68,14 @@ Scale (from the brand guide): Display 84/72/60/48/36/30px (Light) · H1 48 · H2
 The UI is composed from a small, consistent set. Reuse these before inventing new ones.
 
 - **App shell** — `.app` (grid: 256px sidebar + content). `.sidebar` is a navy gradient with `.brand` (the Gateway logo), grouped nav under `.nav-label` headings (**Manage** / **Diagnostics**), active state `nav a.active` (accent left-border + tint), and a `.sidebar-footer` (user avatar + sign-out). Icons are inline stroke SVGs (24×24, `stroke-width ~1.8`).
-- **Topbar** — `.topbar`: page `<h1>` on the left, a `.device-chip` (green dot + truncated device model, full name on hover) on the right.
+- **Topbar** — `.topbar`: page `<h1>` on the left; a `.topbar-right` group on the right holding the `.theme-btn` (sun/moon light-dark toggle) and the `.device-chip` (green dot + truncated device model, full name on hover).
 - **Cards & tiles** — `.card` (white, soft border, `--shadow-sm`, 14px radius). `.tile` adds a `.tile-head` (`.ico` chip + uppercase `.label`) and a `.value`. `.grid` auto-fills `minmax(230px,1fr)`; wide tiles use `grid-column: span 2`.
 - **Live metrics** — the dashboard's live health uses **radial gauges** (`.gauge` + `.g-track`/`.g-val`, a 270° arc via `pathLength=100` + `stroke-dasharray:75 100`, animated on `stroke-dashoffset`; colour switches green→amber→red by threshold) for CPU-util%, memory% and SoC-temp; a **frequency bar** (`.freq-bar`/`.freq-fill`) in the Processor tile; and a continuously-scrolling **network area chart** (`.chart`, rAF slide, gradient fill, emphasized endpoint dot). Fed by the numeric-JSON `/sse/metrics` tick via `dashboard.js`. `.meter`/`.meter-fill` remains the static storage/usage bar. `--gauge-track` is the shared track colour.
 - **Badges** — `.badge` is a **fixed-height (22px) 6px-radius** chip (never a full pill), `align-self:center` so it never stretches in a flex row. Variants: `--running`/`--ok` (green), `--stopped`/`--idle` (grey), `--warn` (amber), `--error` (red), `--plain` (neutral, no dot). Status variants carry a leading dot.
 - **Buttons** — `.btn` with `--primary` (accent), `--ghost` (bordered), `--danger` (red), `--sm`. Focus ring `--ring`.
 - **Tables** — `.table-wrap`/`.table-scroll` + `<table>` (uppercase muted header, row hover). `.kv` is the borderless key/value table used inside cards. `.mono` for hashes/paths, `.trunc` for long cells.
+- **Kernel card** — `.k-rel` (mono release) + `.k-badge` chips (arch / SMP / PREEMPT), a `.k-kv` definition grid (toolchain, binutils, build, built, builder), and a `.k-raw` `<details>` with the verbatim `/proc/version`.
+- **Wi-Fi** — `.wifi-head` (title + interface `<select>` + Scan), a `.wifi-connected` accent panel (signal `.bars`, `.wc-kv` details, disconnect) shown when associated, a manual-scan `.wifi-netlist` of clickable `.wifi-net` rows (4-bar `.bars` glyph, lock, `.wifi-tag--saved`), and a `.wifi-overlay`/`.wifi-modal` connect dialog (passphrase with show/hide). Scan swaps only `#wifi-networks`; connect/disconnect/forget swap the whole section. Row clicks open the modal via `wifi.js`.
 - **Forms** — `.field` (label + input), styled `input`/`select`/`textarea` with the focus ring, `.seg` segmented control, `.callout--warn`/`--info`, `.form-error`.
 - **Auth pages** — `.auth-wrap` (centered, radial-gradient bg) + `.auth-card` + `.auth-logo`.
 - **Terminals & code** — `.logbox` (dark, monospace, scrolling, for logs), `.codeview` (light file viewer), `.editor` (textarea), `.crumbs` (file breadcrumbs), `#term` (xterm host).

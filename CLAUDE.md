@@ -29,9 +29,10 @@ internal/hal/                 HAL (toradex/generic), capability probe, host-root
 internal/httpserver/          Router (stdlib ServeMux), template render, TLS, SSE, all handlers
 internal/auth/                first-boot setup, argon2id (hash.go), sessions
 internal/store/               SQLite (modernc, pure-Go): users, sessions, audit
-internal/network/             NetworkManager over D-Bus (godbus): read + IPv4 edit w/ checkpoint confirm-or-revert
+internal/network/             NetworkManager over D-Bus (godbus): read + IPv4 edit w/ checkpoint confirm-or-revert; Wi-Fi station mgmt (scan/connect/disconnect/forget/active) in wifi.go
 internal/containers/          Docker Engine over the socket via a tiny stdlib HTTP client (NOT the docker SDK): list, logs, start/stop/restart
-internal/sysinfo/             Pure-Go sysfs/proc readers: disk, peripherals (USB/block/CAN/serial/i2c/spi/gpio), cpu, net counters, default iface
+internal/sysinfo/             Pure-Go sysfs/proc readers: disk, peripherals (USB/block/CAN/serial/i2c/spi/gpio), cpu (util + SoC id), net counters; CAN controller details via rtnetlink (can_netlink.go)
+internal/hal/                 HAL + capability probe; kernel.go parses /proc/version (release/toolchain/build) into KernelInfo
 internal/logs/                systemd journal + kernel via journalctl (host binary in the container — see "host-binary exec")
 internal/files/               host filesystem browse (read-only, traversal-safe) + edit/upload/delete confined to /etc,/var
 internal/terminal/            web SSH shell: x/crypto/ssh to localhost, proxied over a WebSocket (gorilla)
@@ -39,7 +40,8 @@ internal/cloud/               Torizon Cloud/OTA status via aktualizr-info (host 
 internal/updates/             [roadmap] offline Lockbox apply; currently the Updates page shows OS version only
 web/embed.go                  //go:embed templates + static
 web/templates/                base.html + one file per page ({{define "content"}}) + fragment_*.html (htmx-polled)
-web/static/css/               tokens.css (brand) + app.css (components)
+web/static/css/               tokens.css (brand; light + full dark palette) + app.css (components)
+web/static/js/                app JS: dashboard.js (live gauges/chart), wifi.js (connect dialog) — vanilla, embedded
 web/static/brand/             Official Torizon SVGs + torizon-gateway-logo[-dark].svg (product lockup)
 web/static/vendor/            htmx, htmx-ext-sse, alpine, xterm/, inter/ (all committed)
 deploy/                       Dockerfile (multi-arch, golang:1.26 → distroless) + docker-compose.yml (reference)
@@ -62,6 +64,8 @@ docs/                         ARCHITECTURE.md, DESIGN-SYSTEM.md
 - **NetworkManager:** system D-Bus (`godbus`) — read interfaces, edit IPv4, and **checkpoint** create/rollback for anti-lockout.
 - **Docker Engine:** unix socket via a **minimal stdlib `net/http` client** (not the heavy docker SDK) — list/logs/start/stop/restart.
 - **systemd journal & `aktualizr-info`:** these are host binaries not present in the distroless container. We run them **via the host dynamic loader** against the host filesystem: `"$hostRoot/lib/ld-*.so" --library-path <host libs incl. /usr/lib/systemd> "$hostRoot/usr/bin/<binary>" ...`, with journal at `/host/run/log/journal` and a generated aktualizr config pointing storage at `/host/var/sota`. Natively these are just `journalctl`/`aktualizr-info`. Requires root + `systemd-journal` group. (`GATEWAY_JOURNALCTL` overrides.) Write the generated config to the **data dir**, not `/tmp` (distroless has no writable `/tmp`).
+- **NetworkManager Wi-Fi:** same system D-Bus — `Device.Wireless` RequestScan/GetAllAccessPoints (SSID/signal/security/band/channel), AddAndActivateConnection to join (PSK/SAE), DeactivateConnection, Settings.Connection.Delete to forget, and ActiveAccessPoint + Bitrate for the connected panel.
+- **rtnetlink (CAN):** CAN controller details (bitrate, ERROR-ACTIVE/BUS-OFF state, sample-point, clock, FD, error counters) live only in netlink IFLA_CAN_* attrs — read in pure Go via `syscall.NetlinkRIB(RTM_GETLINK)`, no `ip` binary. Traffic counters come from sysfs `statistics/`.
 - **Terminal:** SSH to a **fixed** target (`127.0.0.1:22`, never client-supplied) using the user's board credentials; proxied over a WebSocket to xterm.js.
 - **Process status (cloud):** scan `<hostRoot>/proc/*/comm` for `aktualizr*` and `rac` — no systemd/D-Bus dependency.
 
@@ -103,8 +107,9 @@ The Verdin's compose lives at `~/gateway/docker-compose.yml`. Dev-device login i
 ## Current status
 
 **Phases 0–2 complete and validated on a Verdin iMX8M Plus (Torizon OS 7.7.0), plus a large "Diagnostics/Cloud" set and a full brand design pass:**
-- **Dashboard** — System (module, OS, serial, kernel, **Processor** SoC-model/core/arch/cores + live frequency bar/governor, storage w/ partitions+mounts+usage, connectivity), **Live health** (CPU-util%, memory%, SoC-temp as color-zoned **radial gauges**; uptime + load; **network** as a scrolling area chart — numeric-JSON SSE at 1s), **Peripherals** (USB, block/removable, CAN, serial, I²C/SPI/GPIO — 4s poll).
-- **Network** — read via NM D-Bus; IPv4 edit with confirm-or-revert (NM checkpoints).
+- **Dashboard** — System (module, OS, serial, **Kernel** card w/ release+arch+SMP/PREEMPT+toolchain/binutils/build-date from /proc/version, **Processor** SoC-model/core/arch/cores + live frequency bar/governor, storage w/ partitions+mounts+usage, connectivity), **Live health** (CPU-util%, memory%, SoC-temp as color-zoned **radial gauges**; uptime + load; **network** as a scrolling area chart — numeric-JSON SSE at 1s), **Peripherals** (USB, block/removable, **CAN** w/ bitrate+state+errors, serial, I²C/SPI/GPIO — 4s poll).
+- **Network** — read via NM D-Bus; IPv4 edit with confirm-or-revert (NM checkpoints); **Wi-Fi station management** — interface selector, manual scan, click-to-connect dialog (passphrase), connected-details panel, disconnect/forget.
+- **Theme** — light/dark toggle in the topbar (persisted in localStorage, applied pre-paint; full dark palette in tokens.css). Light is the default.
 - **Containers** — list, live logs (SSE), start/stop/restart (self-guardrail).
 - **Logs** — journal + kernel, filter by unit, realtime.
 - **Files** — browse read-only; edit/upload/delete confined to /etc,/var (secrets denylist, off by default).
