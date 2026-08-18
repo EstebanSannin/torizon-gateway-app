@@ -110,8 +110,8 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(31,138,84,.45);} 70% { box-shadow: 0 0 0 6px rgba(31,138,84,0);} 100% { box-shadow: 0 0 0 0 rgba(31,138,84,0);} }
 
 /* ============ Badges ============ */
-.badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; letter-spacing: .01em; }
-.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .9; }
+.badge { display: inline-flex; align-items: center; align-self: center; gap: 6px; padding: 0 8px; height: 22px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; letter-spacing: .01em; line-height: 1; white-space: nowrap; }
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .9; flex: 0 0 6px; }
 .badge--running, .badge--ok { background: var(--status-ok-bg); color: var(--status-ok); }
 .badge--stopped, .badge--idle { background: var(--status-idle-bg); color: var(--status-idle); }
 .badge--warn { background: var(--status-warn-bg); color: var(--status-warn); }
