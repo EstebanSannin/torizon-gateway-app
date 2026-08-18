@@ -125,7 +125,7 @@ The m920x is logged into Docker Hub as `samnite`; never handle registry credenti
 - **Torizon Cloud** — provisioning, device, update state, subsystems (expandable containers), aktualizr + remote-access process status.
 - **Auth** — first-boot, argon2id, sessions, CSRF, audit.
 
-**Remaining:** offline updates *apply* (Phase 3 — Lockbox), the **Yocto native build** (production deployment), hardening (TOTP, BYO cert, rate-limit), mDNS advertising (so `zinnia.local` resolves), and a parse-once template cache before GA. See ARCHITECTURE §15 backlog.
+**Remaining:** **automated testing + CI** (none yet — unit tests for the pure-Go parsers first, then handler/template tests + GitHub Actions; manual colleague testing in the near term), offline updates *apply* (Phase 3 — Lockbox), the **Yocto native build** (production deployment), hardening (TOTP, BYO cert, rate-limit), mDNS advertising (so `zinnia.local` resolves), and a parse-once template cache before GA. See ARCHITECTURE §15 backlog.
 
 ## Security rules for contributors
 
