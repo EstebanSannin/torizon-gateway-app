@@ -106,6 +106,17 @@ func humanDuration(sec int64) string {
 	}
 }
 
+func freqHuman(khz int) string {
+	if khz <= 0 {
+		return "—"
+	}
+	mhz := float64(khz) / 1000
+	if mhz >= 1000 {
+		return fmt.Sprintf("%.2f GHz", mhz/1000)
+	}
+	return fmt.Sprintf("%.0f MHz", mhz)
+}
+
 func tempStr(c float64) string {
 	if c <= 0 {
 		return "—"

@@ -147,6 +147,9 @@ type dashData struct {
 	DiskUsedHuman  string
 	NetIface       string // primary connected interface (summary)
 	NetIPv4        string
+	CPU            sysinfo.CPU
+	CPUMaxHuman    string
+	CPUCurHuman    string
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
@@ -166,6 +169,9 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		DiskUsedHuman:  humanBytes(disk.UsedBytes),
 	}
 	data.NetIface, data.NetIPv4 = s.primaryConnection()
+	data.CPU = sysinfo.CPUInfo(s.cfg.SysfsPath)
+	data.CPUMaxHuman = freqHuman(data.CPU.MaxKHz)
+	data.CPUCurHuman = freqHuman(sysinfo.CPUCurrentKHz(s.cfg.SysfsPath))
 	render(w, "dashboard.html", data)
 }
 
@@ -254,6 +260,8 @@ func (s *Server) handleMetricsSSE(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "event: temp\ndata: %s\n\n", metricBody(tempStr(m.SoCTempCelsius), sparkline(tempBuf)))
 
 		fmt.Fprintf(w, "event: uptime\ndata: %s\n\n", metricBody(humanDuration(m.UptimeSeconds), ""))
+
+		fmt.Fprintf(w, "event: cpufreq\ndata: %s\n\n", freqHuman(sysinfo.CPUCurrentKHz(s.cfg.SysfsPath)))
 
 		// Network throughput (rate = delta bytes / elapsed).
 		rx, tx := sysinfo.NetCounters(s.cfg.SysfsPath, iface)
