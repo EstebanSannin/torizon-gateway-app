@@ -51,7 +51,7 @@ docs/                         ARCHITECTURE.md, DESIGN-SYSTEM.md
 - **Language:** Go, stdlib-first. Deps are pure-Go/no-cgo (see `go.mod`): `modernc.org/sqlite`, `golang.org/x/crypto`, `github.com/godbus/dbus/v5`, `github.com/gorilla/websocket`. Module targets Go 1.25+; Dockerfile builds on `golang:1.26`. Build static with `CGO_ENABLED=0`.
 - **Routing:** stdlib `net/http.ServeMux` with method+pattern routes (`"GET /network"`, `"POST /files/save"`). No chi.
 - **Templates:** each page defines `{{define "content"}}`; `render(w, "page.html", data)` composes with `base.html`. Fragments (htmx-polled) define their own name and render via `renderFragment(w, file, define, data)`. `renderInline` for tiny inline pages. Template funcs: `hbytes` (any int → human bytes). Every protected page's data **embeds `layout`** (set via `s.layoutFor`) for the nav/user/CSRF/device chip.
-- **Live data:** two patterns — **SSE** for high-frequency streams (`/sse/metrics` value+sparkline fragments at 1s; `/sse/logs/{id}`, `/sse/journal`, `/ws/terminal`), and **htmx polling** for periodic HTML fragments (`hx-get=/fragment/... hx-trigger="load, every Ns"` → peripherals 4s, cloud 15s).
+- **Live data:** two patterns — **SSE** for high-frequency streams (`/sse/metrics` emits a compact **numeric JSON `tick`** at 1s consumed by `web/static/js/dashboard.js`, which renders the radial gauges/freq-bar via CSS transitions and the network chart via rAF; `/sse/logs/{id}`, `/sse/journal` still push HTML; `/ws/terminal`), and **htmx polling** for periodic HTML fragments (`hx-get=/fragment/... hx-trigger="load, every Ns"` → peripherals 4s, cloud 15s).
 - **Mutations:** require auth (`s.requireAuth`), check CSRF (`checkCSRF`), write an audit record (`s.store.AddAudit`). Risky changes (network) use confirm-or-revert.
 - **Errors:** return them; log at edges. Don't panic in handlers.
 - **Style:** match surrounding code; run `gofmt -w . && go vet ./...` before committing. Keep it human-readable, clean, light (embedded target).
@@ -103,7 +103,7 @@ The Verdin's compose lives at `~/gateway/docker-compose.yml`. Dev-device login i
 ## Current status
 
 **Phases 0–2 complete and validated on a Verdin iMX8M Plus (Torizon OS 7.7.0), plus a large "Diagnostics/Cloud" set and a full brand design pass:**
-- **Dashboard** — System (module, OS, serial, kernel, **Processor** model/cores/freq/governor, storage w/ partitions+mounts+usage, connectivity), **Live health** (CPU/mem/temp/uptime/network — sparklines, 1s SSE), **Peripherals** (USB, block/removable, CAN, serial, I²C/SPI/GPIO — 4s poll).
+- **Dashboard** — System (module, OS, serial, kernel, **Processor** SoC-model/core/arch/cores + live frequency bar/governor, storage w/ partitions+mounts+usage, connectivity), **Live health** (CPU-util%, memory%, SoC-temp as color-zoned **radial gauges**; uptime + load; **network** as a scrolling area chart — numeric-JSON SSE at 1s), **Peripherals** (USB, block/removable, CAN, serial, I²C/SPI/GPIO — 4s poll).
 - **Network** — read via NM D-Bus; IPv4 edit with confirm-or-revert (NM checkpoints).
 - **Containers** — list, live logs (SSE), start/stop/restart (self-guardrail).
 - **Logs** — journal + kernel, filter by unit, realtime.

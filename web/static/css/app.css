@@ -106,16 +106,50 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .meter { height: 7px; background: var(--color-surface-alt); border: 1px solid var(--color-border); border-radius: 999px; overflow: hidden; }
 .meter-fill { height: 100%; background: linear-gradient(90deg, var(--tn-primary-light), var(--color-accent-strong)); border-radius: 999px; }
 
-/* ---- Live metrics (sparklines) ---- */
-.metric-body { display: flex; flex-direction: column; gap: 10px; }
-.metric-val { font-size: 1.5rem; font-weight: 700; color: var(--color-heading); letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.metric-total { font-size: 1rem; font-weight: 600; color: var(--color-text-muted); }
-.spark { width: 100%; height: 34px; display: block; margin-top: 2px; overflow: visible; }
-.spark polyline { fill: none; stroke: var(--color-accent); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
-.metric .ico { color: var(--color-accent-strong); }
-.net-iface { font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem; font-weight: 700; color: var(--color-heading); }
-.net-rates { display: flex; gap: 22px; }
-.net-rate { font-size: 1.25rem; font-weight: 700; color: var(--color-heading); font-variant-numeric: tabular-nums; }
+/* ---- Live health: radial gauges ---- */
+.gauge-tile { align-items: center; }
+.gauge { position: relative; width: 150px; height: 150px; }
+.gauge svg { width: 100%; height: 100%; display: block; }
+.gauge .g-track { fill: none; stroke: var(--gauge-track); stroke-width: 11; stroke-linecap: round; transform: rotate(135deg); transform-origin: center; }
+.gauge .g-val { fill: none; stroke: var(--color-accent); stroke-width: 11; stroke-linecap: round; transform: rotate(135deg); transform-origin: center; transition: stroke-dashoffset .55s cubic-bezier(.4,0,.2,1), stroke .4s ease; }
+.gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.gauge-num { font-size: 2rem; font-weight: 700; letter-spacing: -1px; line-height: 1; color: var(--color-heading); font-variant-numeric: tabular-nums; }
+.gauge-num .u { font-size: 0.9rem; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0; }
+.gauge-sub { font-size: 0.72rem; color: var(--color-text-muted); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.gauge-cap { margin-top: 8px; font-size: 0.8rem; color: var(--color-text-muted); text-align: center; }
+.gauge-cap b { color: var(--color-text); font-weight: 600; }
+
+/* ---- Processor: live frequency bar ---- */
+.freq-wrap { margin-top: 16px; }
+.freq-line { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 7px; }
+.freq-now { font-size: 1.2rem; font-weight: 700; color: var(--color-heading); font-variant-numeric: tabular-nums; }
+.freq-now .u { font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600; margin-left: 2px; }
+.freq-gov { font-size: 0.78rem; color: var(--color-text-muted); }
+.freq-bar { position: relative; height: 9px; border-radius: 999px; background: var(--gauge-track); overflow: hidden; }
+.freq-fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-strong)); transition: width .55s cubic-bezier(.4,0,.2,1); }
+.freq-ticks { display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.7rem; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+
+/* ---- Processor: SoC identity ---- */
+.proc-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.proc-soc { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; color: var(--color-heading); }
+.proc-core { font-size: 0.85rem; color: var(--color-text-muted); }
+
+/* ---- Live health: network oscilloscope ---- */
+.net-nums { display: flex; gap: 26px; margin-bottom: 6px; }
+.net-metric { display: flex; flex-direction: column; gap: 1px; }
+.net-metric .k { font-size: 0.72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; display: flex; align-items: center; gap: 5px; }
+.net-metric .k.dl { color: var(--color-accent-strong); }
+.net-metric .k.ul { color: var(--status-warn); }
+.net-metric .v { font-size: 1.25rem; font-weight: 700; color: var(--color-heading); font-variant-numeric: tabular-nums; }
+.net-metric .v .u { font-size: 0.78rem; color: var(--color-text-muted); font-weight: 600; }
+.chart { width: 100%; height: 112px; display: block; }
+.chart .grid-line { stroke: var(--color-border); stroke-width: 1; stroke-dasharray: 3 4; opacity: .7; }
+.chart .c-rx-line { stroke: var(--color-accent); }
+.chart .c-tx-line { stroke: var(--status-warn); }
+.chart .c-rx-dot { fill: var(--color-accent); }
+.chart .c-tx-dot { fill: var(--status-warn); }
+.rx0 { stop-color: var(--color-accent); stop-opacity: .28; } .rx1 { stop-color: var(--color-accent); stop-opacity: 0; }
+.tx0 { stop-color: var(--status-warn); stop-opacity: .22; } .tx1 { stop-color: var(--status-warn); stop-opacity: 0; }
 
 .live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--status-ok); margin-right: 6px; box-shadow: 0 0 0 0 rgba(31,138,84,.5); animation: pulse 2s infinite; vertical-align: middle; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(31,138,84,.45);} 70% { box-shadow: 0 0 0 6px rgba(31,138,84,0);} 100% { box-shadow: 0 0 0 0 rgba(31,138,84,0);} }

@@ -101,6 +101,9 @@
   --status-idle:     #64748B;
   --status-idle-bg:  #EEF1F6;
 
+  /* Gauge / meter track (behind live arcs and bars) */
+  --gauge-track:     #E7EDF5;
+
   /* Elevation + focus */
   --shadow-sm:  0 1px 2px rgba(4, 24, 48, 0.06);
   --shadow-md:  0 4px 16px rgba(4, 24, 48, 0.08);
@@ -148,4 +151,5 @@
   --color-sidebar-bg:      var(--tn-primary-dark);
   --color-sidebar-text:    var(--tn-text-primary-light);
   --color-sidebar-active:  var(--tn-primary-light);
+  --gauge-track:           #0d3a68;
 }

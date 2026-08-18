@@ -1,19 +1,31 @@
 {{define "content"}}
 <div class="section-title"><h2>System</h2><span class="badge badge--plain">HAL: {{.Board.Kind}}</span><span class="rule"></span></div>
-<div class="grid" hx-ext="sse" sse-connect="/sse/metrics">
+<div class="grid">
+  <div class="card tile" style="grid-column: span 2;">
+    <div class="tile-head">
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/></svg></span>
+      <span class="label">Processor</span>
+    </div>
+    <div class="proc-top">
+      <span class="proc-soc">{{.CPU.SoC}}</span>
+      <span class="proc-core">{{.CPU.Cores}}{{if .CPU.Core}} × {{.CPU.Core}}{{else}} cores{{end}}{{if .CPU.Arch}} · {{.CPU.Arch}}{{end}}</span>
+    </div>
+    <div class="freq-wrap">
+      <div class="freq-line">
+        <span class="freq-now"><span id="freqNow">—</span><span class="u">GHz</span></span>
+        <span class="freq-gov">governor <code class="mono">{{.CPU.Governor}}</code></span>
+      </div>
+      <div class="freq-bar"><div class="freq-fill" id="freqFill" data-min="{{.CPUMinMHz}}" data-max="{{.CPUMaxMHz}}"></div></div>
+      <div class="freq-ticks"><span>{{.CPUMinHuman}}</span><span>{{.CPUMaxHuman}} max</span></div>
+    </div>
+  </div>
   <div class="card tile">
     <div class="tile-head">
       <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg></span>
       <span class="label">Module</span>
     </div>
     <div class="value sm">{{.Board.Model}}</div>
-  </div>
-  <div class="card tile">
-    <div class="tile-head">
-      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-      <span class="label">Torizon OS</span>
-    </div>
-    <div class="value sm">{{.Board.OSVersion}}</div>
+    <div class="sub">Torizon OS {{.Board.OSVersion}}</div>
   </div>
   <div class="card tile">
     <div class="tile-head">
@@ -28,14 +40,6 @@
       <span class="label">Kernel</span>
     </div>
     <div class="value sm">{{.Board.KernelVersion}}</div>
-  </div>
-  <div class="card tile" style="grid-column: span 2;">
-    <div class="tile-head">
-      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/></svg></span>
-      <span class="label">Processor</span>
-    </div>
-    <div class="value sm">{{.CPU.Model}} · {{.CPU.Cores}} cores</div>
-    <div class="sub"><span sse-swap="cpufreq">{{.CPUCurHuman}}</span> now · up to {{.CPUMaxHuman}} · governor <span class="mono">{{.CPU.Governor}}</span></div>
   </div>
   <div class="card tile">
     <div class="tile-head">
@@ -57,26 +61,69 @@
 </div>
 
 <div class="section-title"><h2><span class="live-dot"></span>Live health</h2><span class="muted" style="font-size:0.8rem">live · 1s</span><span class="rule"></span></div>
-<div class="grid" hx-ext="sse" sse-connect="/sse/metrics">
-  <div class="card tile metric">
-    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 2v3M14 2v3M10 19v3M14 19v3M2 10h3M2 14h3M19 10h3M19 14h3"/></svg></span><span class="label">CPU load (1m)</span></div>
-    <div class="metric-body" sse-swap="cpu"><div class="metric-val">{{printf "%.2f" .Metrics.CPULoad1}}</div></div>
+<div class="grid">
+  <div class="card tile gauge-tile">
+    <div class="gauge">
+      <svg viewBox="0 0 160 160">
+        <circle class="g-track" cx="80" cy="80" r="64" pathLength="100" stroke-dasharray="75 100"/>
+        <circle class="g-val" id="cpuArc" cx="80" cy="80" r="64" pathLength="100" stroke-dasharray="75 100" stroke-dashoffset="75"/>
+      </svg>
+      <div class="gauge-center"><div class="gauge-num"><span id="cpuNum">0</span><span class="u">%</span></div><div class="gauge-sub">CPU</div></div>
+    </div>
+    <div class="gauge-cap">utilization · <b>{{.CPU.Cores}} cores</b></div>
   </div>
-  <div class="card tile metric">
-    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v10M11 7v10M15 7v10"/></svg></span><span class="label">Memory used</span></div>
-    <div class="metric-body" sse-swap="mem"><div class="metric-val">{{.MemUsedHuman}} <span class="metric-total">/ {{.MemTotalHuman}}</span></div></div>
+
+  <div class="card tile gauge-tile">
+    <div class="gauge">
+      <svg viewBox="0 0 160 160">
+        <circle class="g-track" cx="80" cy="80" r="64" pathLength="100" stroke-dasharray="75 100"/>
+        <circle class="g-val" id="memArc" cx="80" cy="80" r="64" pathLength="100" stroke-dasharray="75 100" stroke-dashoffset="75"/>
+      </svg>
+      <div class="gauge-center"><div class="gauge-num"><span id="memNum">0</span><span class="u">%</span></div><div class="gauge-sub">Memory</div></div>
+    </div>
+    <div class="gauge-cap"><b id="memUsed">{{.MemUsedHuman}}</b> / {{.MemTotalHuman}}</div>
   </div>
-  <div class="card tile metric">
-    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 13V5a2 2 0 014 0v8a4 4 0 11-4 0z"/></svg></span><span class="label">SoC temperature</span></div>
-    <div class="metric-body" sse-swap="temp"><div class="metric-val">{{if gt .Metrics.SoCTempCelsius 0.0}}{{printf "%.1f°C" .Metrics.SoCTempCelsius}}{{else}}—{{end}}</div></div>
+
+  <div class="card tile gauge-tile">
+    <div class="gauge">
+      <svg viewBox="0 0 160 160">
+        <circle class="g-track" cx="80" cy="80" r="64" pathLength="100" stroke-dasharray="75 100"/>
+        <circle class="g-val" id="tempArc" cx="80" cy="80" r="64" pathLength="100" stroke-dasharray="75 100" stroke-dashoffset="75"/>
+      </svg>
+      <div class="gauge-center"><div class="gauge-num"><span id="tempNum">0</span><span class="u">°C</span></div><div class="gauge-sub">SoC temp</div></div>
+    </div>
+    <div class="gauge-cap">junction temperature</div>
   </div>
-  <div class="card tile metric">
+
+  <div class="card tile">
     <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="label">Uptime</span></div>
-    <div class="metric-body" sse-swap="uptime"><div class="metric-val" style="font-size:1.15rem">{{.UptimeHuman}}</div></div>
+    <div class="value" style="font-size:1.25rem"><span id="uptime">{{.UptimeHuman}}</span></div>
+    <div class="sub">since last boot</div>
+    <div class="label" style="margin-top:14px">Load avg</div>
+    <div class="value sm" style="margin-top:2px"><span id="load">{{printf "%.2f" .Metrics.CPULoad1}}</span> <span class="freq-gov" style="font-size:0.72rem">1m</span></div>
   </div>
-  <div class="card tile metric" style="grid-column: span 2;">
-    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 12h4l2-4 4 8 2-4h4"/></svg></span><span class="label">Network throughput</span></div>
-    <div class="metric-body net-body" sse-swap="net"><div class="net-head"><span class="net-iface">{{if .NetIface}}{{.NetIface}}{{else}}—{{end}}</span></div><div class="net-rates"><span class="net-rate">↓ …</span><span class="net-rate">↑ …</span></div></div>
+
+  <div class="card tile" style="grid-column: span 2;">
+    <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 12h4l2-4 4 8 2-4h4"/></svg></span><span class="label">Network throughput · <span id="netIface">{{if .NetIface}}{{.NetIface}}{{else}}—{{end}}</span></span></div>
+    <div class="net-nums">
+      <div class="net-metric"><span class="k dl">▼ Download</span><span class="v"><span id="rxNum">0</span> <span class="u" id="rxU">B/s</span></span></div>
+      <div class="net-metric"><span class="k ul">▲ Upload</span><span class="v"><span id="txNum">0</span> <span class="u" id="txU">B/s</span></span></div>
+    </div>
+    <svg class="chart" id="chart" viewBox="0 0 600 112" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="rxg" x1="0" y1="0" x2="0" y2="1"><stop class="rx0" offset="0"/><stop class="rx1" offset="1"/></linearGradient>
+        <linearGradient id="txg" x1="0" y1="0" x2="0" y2="1"><stop class="tx0" offset="0"/><stop class="tx1" offset="1"/></linearGradient>
+      </defs>
+      <line class="grid-line" x1="0" y1="28" x2="600" y2="28"/>
+      <line class="grid-line" x1="0" y1="56" x2="600" y2="56"/>
+      <line class="grid-line" x1="0" y1="84" x2="600" y2="84"/>
+      <path id="rxArea" fill="url(#rxg)" stroke="none"/>
+      <path id="txArea" fill="url(#txg)" stroke="none"/>
+      <path id="rxLine" class="c-rx-line" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <path id="txLine" class="c-tx-line" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle id="rxDot" class="c-rx-dot" r="3"/>
+      <circle id="txDot" class="c-tx-dot" r="3"/>
+    </svg>
   </div>
 </div>
 
@@ -84,4 +131,6 @@
 <div hx-get="/fragment/peripherals" hx-trigger="load, every 4s" hx-swap="innerHTML">
   <div class="empty">Loading peripherals…</div>
 </div>
+
+<script src="/static/js/dashboard.js" defer></script>
 {{end}}

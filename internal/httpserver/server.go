@@ -3,6 +3,7 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -153,8 +154,10 @@ type dashData struct {
 	NetIface       string // primary connected interface (summary)
 	NetIPv4        string
 	CPU            sysinfo.CPU
+	CPUMinHuman    string
 	CPUMaxHuman    string
-	CPUCurHuman    string
+	CPUMinMHz      int
+	CPUMaxMHz      int
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
@@ -175,8 +178,10 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	data.NetIface, data.NetIPv4 = s.primaryConnection()
 	data.CPU = sysinfo.CPUInfo(s.cfg.SysfsPath)
+	data.CPUMinHuman = freqHuman(data.CPU.MinKHz)
 	data.CPUMaxHuman = freqHuman(data.CPU.MaxKHz)
-	data.CPUCurHuman = freqHuman(sysinfo.CPUCurrentKHz(s.cfg.SysfsPath))
+	data.CPUMinMHz = data.CPU.MinKHz / 1000
+	data.CPUMaxMHz = data.CPU.MaxKHz / 1000
 	render(w, "dashboard.html", data)
 }
 
@@ -244,43 +249,48 @@ func (s *Server) handleMetricsSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	const window = 60 // samples kept per sparkline (~1 min at 1s)
-	var cpuBuf, memBuf, tempBuf, netBuf []float64
-
+	warn, alarm, scale := sysinfo.ThermalLimits(s.cfg.SysfsPath)
 	iface := sysinfo.DefaultIface()
 	prevRx, prevTx := sysinfo.NetCounters(s.cfg.SysfsPath, iface)
+	prevIdle, prevTotal := sysinfo.CPUSample()
 	prevT := time.Now()
 
 	emit := func() {
 		m, _ := s.board.Metrics()
+		now := time.Now()
+		dt := now.Sub(prevT).Seconds()
 
-		cpuBuf = ring(cpuBuf, m.CPULoad1, window)
-		fmt.Fprintf(w, "event: cpu\ndata: %s\n\n", metricBody(fmt.Sprintf("%.2f", m.CPULoad1), sparkline(cpuBuf)))
-
-		memBuf = ring(memBuf, float64(m.MemUsedBytes), window)
-		memVal := humanBytes(m.MemUsedBytes) + ` <span class="metric-total">/ ` + humanBytes(m.MemTotalBytes) + `</span>`
-		fmt.Fprintf(w, "event: mem\ndata: %s\n\n", metricBody(memVal, sparkline(memBuf)))
-
-		tempBuf = ring(tempBuf, m.SoCTempCelsius, window)
-		fmt.Fprintf(w, "event: temp\ndata: %s\n\n", metricBody(tempStr(m.SoCTempCelsius), sparkline(tempBuf)))
-
-		fmt.Fprintf(w, "event: uptime\ndata: %s\n\n", metricBody(humanDuration(m.UptimeSeconds), ""))
-
-		fmt.Fprintf(w, "event: cpufreq\ndata: %s\n\n", freqHuman(sysinfo.CPUCurrentKHz(s.cfg.SysfsPath)))
+		// CPU utilisation from /proc/stat deltas (true 0–100%).
+		idle, total := sysinfo.CPUSample()
+		var cpuPct float64
+		if dTot := total - prevTotal; dTot > 0 {
+			cpuPct = (1 - float64(idle-prevIdle)/float64(dTot)) * 100
+		}
+		prevIdle, prevTotal = idle, total
 
 		// Network throughput (rate = delta bytes / elapsed).
 		rx, tx := sysinfo.NetCounters(s.cfg.SysfsPath, iface)
-		now := time.Now()
-		dt := now.Sub(prevT).Seconds()
 		var rxRate, txRate float64
 		if dt > 0 {
 			rxRate = float64(rx-prevRx) / dt
 			txRate = float64(tx-prevTx) / dt
 		}
 		prevRx, prevTx, prevT = rx, tx, now
-		netBuf = ring(netBuf, rxRate+txRate, window)
-		fmt.Fprintf(w, "event: net\ndata: %s\n\n", netBody(iface, rxRate, txRate, sparkline(netBuf)))
 
+		var memPct float64
+		if m.MemTotalBytes > 0 {
+			memPct = float64(m.MemUsedBytes) / float64(m.MemTotalBytes) * 100
+		}
+
+		tick := metricsTick{
+			CPU: round1(cpuPct), Load: m.CPULoad1,
+			Mem: round1(memPct), MemUsed: m.MemUsedBytes, MemTotal: m.MemTotalBytes,
+			Temp: round1(m.SoCTempCelsius), TempWarn: warn, TempAlarm: alarm, TempScale: scale,
+			FreqCur: sysinfo.CPUCurrentKHz(s.cfg.SysfsPath) / 1000,
+			Uptime:  humanDuration(m.UptimeSeconds), Rx: rxRate, Tx: txRate, Iface: iface,
+		}
+		buf, _ := json.Marshal(tick)
+		fmt.Fprintf(w, "event: tick\ndata: %s\n\n", buf)
 		flusher.Flush()
 	}
 
@@ -297,13 +307,23 @@ func (s *Server) handleMetricsSSE(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// netBody renders the network tile body: interface, ↓rx/↑tx rates, sparkline.
-func netBody(iface string, rxRate, txRate float64, spark string) string {
-	if iface == "" {
-		iface = "—"
-	}
-	rates := fmt.Sprintf(`<span class="net-rate">↓ %s/s</span><span class="net-rate">↑ %s/s</span>`,
-		humanBytes(uint64(rxRate)), humanBytes(uint64(txRate)))
-	return `<div class="net-head"><span class="net-iface">` + iface + `</span></div>` +
-		`<div class="net-rates">` + rates + `</div>` + spark
+// metricsTick is the JSON payload pushed once per second to the dashboard's live
+// section. Numbers only — the browser renders the gauges, bars and chart.
+type metricsTick struct {
+	CPU       float64 `json:"cpu"`  // utilisation %
+	Load      float64 `json:"load"` // 1-min load average
+	Mem       float64 `json:"mem"`  // used %
+	MemUsed   uint64  `json:"memUsed"`
+	MemTotal  uint64  `json:"memTotal"`
+	Temp      float64 `json:"temp"`      // °C
+	TempWarn  float64 `json:"tempWarn"`  // amber threshold °C
+	TempAlarm float64 `json:"tempAlarm"` // red threshold °C
+	TempScale float64 `json:"tempScale"` // gauge full-scale °C
+	FreqCur   int     `json:"freqCur"`   // MHz
+	Uptime    string  `json:"uptime"`
+	Rx        float64 `json:"rx"` // bytes/s
+	Tx        float64 `json:"tx"`
+	Iface     string  `json:"iface"`
 }
+
+func round1(v float64) float64 { return float64(int(v*10+0.5)) / 10 }

@@ -116,10 +116,3 @@ func freqHuman(khz int) string {
 	}
 	return fmt.Sprintf("%.0f MHz", mhz)
 }
-
-func tempStr(c float64) string {
-	if c <= 0 {
-		return "—"
-	}
-	return fmt.Sprintf("%.1f°C", c)
-}
