@@ -148,6 +148,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .k-kv dd { margin: 0; font-size: 0.9rem; color: var(--color-heading); font-weight: 600; }
 .k-mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
 .k-dim { color: var(--color-text-muted); font-weight: 500; }
+.k-sub { margin-top: 6px; font-size: 0.85rem; color: var(--color-text-muted); }
+.k-foot { margin-top: 14px; border-top: 1px solid var(--color-border); padding-top: 10px; font-size: 0.82rem; color: var(--color-text-muted); }
+.k-foot .k-mono { color: var(--color-heading); font-weight: 600; }
 .k-raw { margin-top: 14px; border-top: 1px solid var(--color-border); padding-top: 10px; }
 .k-raw summary { cursor: pointer; color: var(--color-accent-strong); font-weight: 600; font-size: 0.8rem; user-select: none; }
 .k-raw pre { margin: 10px 0 0; background: var(--color-surface-alt); border: 1px solid var(--color-border); border-radius: 9px; padding: 11px 12px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.78rem; color: var(--color-text); white-space: pre-wrap; word-break: break-word; line-height: 1.5; }

@@ -57,13 +57,33 @@
     </dl>
     {{if .Kernel.Raw}}<details class="k-raw"><summary>Raw /proc/version</summary><pre>{{.Kernel.Raw}}</pre></details>{{end}}
   </div>
-  <div class="card tile">
+  <div class="card tile" style="grid-column: span 2;">
     <div class="tile-head">
       <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"/></svg></span>
       <span class="label">Connectivity</span>
     </div>
-    <div class="value sm">{{if .NetIPv4}}{{.NetIPv4}}{{else}}—{{end}}</div>
-    <div class="sub">{{if .NetIface}}via {{.NetIface}}{{else}}not connected{{end}}</div>
+    {{with .Conn}}
+      <div class="k-top">
+        <span class="k-rel">{{.IPv4}}</span>
+        {{if .Prefix}}<span class="k-badge">/{{.Prefix}}</span>{{end}}
+        {{if .IsWAN}}<span class="k-badge">WAN</span>{{end}}
+        <span class="wifi-pill">connected</span>
+      </div>
+      <div class="k-sub">{{.Iface}} · {{.Type}}{{if .SSID}} · {{.SSID}}{{end}}{{if .SpeedHuman}} · {{.SpeedHuman}}{{if .Duplex}} {{.Duplex}}-duplex{{end}}{{end}}</div>
+      <dl class="k-kv">
+        <dt>Gateway</dt><dd class="k-mono">{{if .Gateway}}{{.Gateway}}{{else}}—{{end}}</dd>
+        <dt>DNS</dt><dd class="k-mono">{{if .DNS}}{{range $i, $d := .DNS}}{{if $i}}, {{end}}{{$d}}{{end}}{{else}}—{{end}}</dd>
+        <dt>Method</dt><dd>{{if .Method}}{{.Method}}{{else}}—{{end}}{{if .Profile}} <span class="k-dim">· profile {{.Profile}}</span>{{end}}</dd>
+        <dt>MAC</dt><dd class="k-mono">{{if .MAC}}{{.MAC}}{{else}}—{{end}}</dd>
+        {{if .MTU}}<dt>MTU</dt><dd>{{.MTU}}</dd>{{end}}
+      </dl>
+      {{if .Others}}
+        <div class="k-foot">Also up:{{range $i, $o := .Others}}{{if $i}} · {{end}} <span class="k-mono">{{$o.Iface}}</span> {{$o.IPv4}} <span class="k-dim">({{$o.Type}})</span>{{end}}</div>
+      {{end}}
+    {{else}}
+      <div class="value sm">Not connected</div>
+      <div class="sub">No interface has an IPv4 address.</div>
+    {{end}}
   </div>
   <div class="card tile" style="grid-column: span 2;">
     <div class="tile-head">

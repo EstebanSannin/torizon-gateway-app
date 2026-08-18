@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -151,8 +153,8 @@ type dashData struct {
 	Disk           sysinfo.Disk
 	DiskTotalHuman string
 	DiskUsedHuman  string
-	NetIface       string // primary connected interface (summary)
-	NetIPv4        string
+	NetIface       string // primary connected interface (for the throughput tile)
+	Conn           *connInfo
 	CPU            sysinfo.CPU
 	CPUMinHuman    string
 	CPUMaxHuman    string
@@ -177,7 +179,10 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		DiskTotalHuman: humanBytes(disk.TotalBytes),
 		DiskUsedHuman:  humanBytes(disk.UsedBytes),
 	}
-	data.NetIface, data.NetIPv4 = s.primaryConnection()
+	data.Conn = s.connectionInfo()
+	if data.Conn != nil {
+		data.NetIface = data.Conn.Iface
+	}
 	data.CPU = sysinfo.CPUInfo(s.cfg.SysfsPath)
 	data.CPUMinHuman = freqHuman(data.CPU.MinKHz)
 	data.CPUMaxHuman = freqHuman(data.CPU.MaxKHz)
@@ -189,22 +194,105 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	render(w, "dashboard.html", data)
 }
 
-// primaryConnection returns the first connected interface with an IPv4 address
-// (a compact connectivity summary for the dashboard). Empty when unavailable.
-func (s *Server) primaryConnection() (iface, ipv4 string) {
+// connInfo is the detailed connectivity/WAN summary for the dashboard.
+type connInfo struct {
+	Iface      string
+	Type       string // Ethernet / Wi-Fi
+	IPv4       string // address only
+	Prefix     string // CIDR prefix length
+	Gateway    string
+	DNS        []string
+	MAC        string
+	Method     string // DHCP / Manual
+	Profile    string // NM connection id
+	SSID       string
+	SpeedHuman string // "1 Gbit/s" (Ethernet only)
+	Duplex     string
+	MTU        int
+	IsWAN      bool // carries the (primary) default route
+	Others     []otherConn
+}
+
+// otherConn is a secondary connected interface (multi-homed footer).
+type otherConn struct {
+	Iface, Type, IPv4 string
+}
+
+// connectionInfo builds the primary connection summary: the lowest-metric
+// default-route interface (the WAN uplink), or the first connected interface
+// with an IPv4 address. Returns nil when nothing is connected.
+func (s *Server) connectionInfo() *connInfo {
 	if s.network == nil || !s.network.Available() {
-		return "", ""
+		return nil
 	}
 	ifaces, err := s.network.Interfaces()
-	if err != nil {
-		return "", ""
+	if err != nil || len(ifaces) == 0 {
+		return nil
 	}
-	for _, i := range ifaces {
-		if i.State == "Connected" && len(i.IPv4) > 0 {
-			return i.Name, i.IPv4[0]
+	byName := map[string]*network.Iface{}
+	for i := range ifaces {
+		byName[ifaces[i].Name] = &ifaces[i]
+	}
+	defaults := sysinfo.DefaultRoutes()
+	defaultSet := map[string]bool{}
+	for _, d := range defaults {
+		defaultSet[d] = true
+	}
+
+	var primary *network.Iface
+	if len(defaults) > 0 {
+		if p, ok := byName[defaults[0]]; ok && len(p.IPv4) > 0 {
+			primary = p
 		}
 	}
-	return "", ""
+	if primary == nil {
+		for i := range ifaces {
+			if ifaces[i].State == "Connected" && len(ifaces[i].IPv4) > 0 {
+				primary = &ifaces[i]
+				break
+			}
+		}
+	}
+	if primary == nil {
+		return nil
+	}
+
+	ci := &connInfo{
+		Iface: primary.Name, Type: primary.Type, Gateway: primary.Gateway,
+		DNS: primary.DNS, MAC: primary.MAC, Method: primary.Method,
+		Profile: primary.ConnectionID, SSID: primary.SSID, IsWAN: defaultSet[primary.Name],
+	}
+	if len(primary.IPv4) > 0 {
+		ci.IPv4, ci.Prefix, _ = strings.Cut(primary.IPv4[0], "/")
+	}
+	link := sysinfo.Link(s.cfg.SysfsPath, primary.Name)
+	ci.SpeedHuman = linkSpeedHuman(link.SpeedMbps)
+	ci.Duplex = link.Duplex
+	ci.MTU = link.MTU
+
+	for i := range ifaces {
+		f := &ifaces[i]
+		if f.Name == primary.Name || f.State != "Connected" || len(f.IPv4) == 0 {
+			continue
+		}
+		addr, _, _ := strings.Cut(f.IPv4[0], "/")
+		ci.Others = append(ci.Others, otherConn{Iface: f.Name, Type: f.Type, IPv4: addr})
+	}
+	return ci
+}
+
+// linkSpeedHuman formats an Ethernet link speed ("1 Gbit/s", "100 Mbit/s").
+func linkSpeedHuman(mbps int) string {
+	switch {
+	case mbps <= 0:
+		return ""
+	case mbps%1000 == 0:
+		return strconv.Itoa(mbps/1000) + " Gbit/s"
+	case mbps > 1000:
+		return strconv.FormatFloat(float64(mbps)/1000, 'f', 1, 64) + " Gbit/s"
+	default:
+		return strconv.Itoa(mbps) + " Mbit/s"
+	}
 }
 
 // containersData is the template model for the container list.

@@ -60,7 +60,7 @@ docs/                         ARCHITECTURE.md, DESIGN-SYSTEM.md
 
 ## Key data-access patterns (how the app reaches host state)
 
-- **sysfs / procfs (pure Go):** peripherals, CPU, disk usage, net counters, mounts, process list. `/sys` and most of `/proc` are host-global (USB/block/CPU) or reflect the host under **host networking** (net, routes). Read via `internal/sysinfo`.
+- **sysfs / procfs (pure Go):** peripherals, CPU, disk usage, net counters, mounts, process list, **link speed/duplex/MTU** (`/sys/class/net/<if>`), and the **primary WAN** (lowest-metric default route from `/proc/net/route`, `DefaultRoutes`). `/sys` and most of `/proc` are host-global (USB/block/CPU) or reflect the host under **host networking** (net, routes). Read via `internal/sysinfo`.
 - **NetworkManager:** system D-Bus (`godbus`) — read interfaces, edit IPv4, and **checkpoint** create/rollback for anti-lockout.
 - **Docker Engine:** unix socket via a **minimal stdlib `net/http` client** (not the heavy docker SDK) — list/logs/start/stop/restart.
 - **systemd journal & `aktualizr-info`:** these are host binaries not present in the distroless container. We run them **via the host dynamic loader** against the host filesystem: `"$hostRoot/lib/ld-*.so" --library-path <host libs incl. /usr/lib/systemd> "$hostRoot/usr/bin/<binary>" ...`, with journal at `/host/run/log/journal` and a generated aktualizr config pointing storage at `/host/var/sota`. Natively these are just `journalctl`/`aktualizr-info`. Requires root + `systemd-journal` group. (`GATEWAY_JOURNALCTL` overrides.) Write the generated config to the **data dir**, not `/tmp` (distroless has no writable `/tmp`).
@@ -107,7 +107,7 @@ The Verdin's compose lives at `~/gateway/docker-compose.yml`. Dev-device login i
 ## Current status
 
 **Phases 0–2 complete and validated on a Verdin iMX8M Plus (Torizon OS 7.7.0), plus a large "Diagnostics/Cloud" set and a full brand design pass:**
-- **Dashboard** — System (module, OS, serial, **Kernel** card w/ release+arch+SMP/PREEMPT+toolchain/binutils/build-date from /proc/version, **Processor** SoC-model/core/arch/cores + live frequency bar/governor, storage w/ partitions+mounts+usage, connectivity), **Live health** (CPU-util%, memory%, SoC-temp as color-zoned **radial gauges**; uptime + load; **network** as a scrolling area chart — numeric-JSON SSE at 1s), **Peripherals** (USB, block/removable, **CAN** w/ bitrate+state+errors, serial, I²C/SPI/GPIO — 4s poll).
+- **Dashboard** — System (module, OS, serial, **Kernel** card w/ release+arch+SMP/PREEMPT+toolchain/binutils/build-date from /proc/version, **Processor** SoC-model/core/arch/cores + live frequency bar/governor, storage w/ partitions+mounts+usage, **Connectivity/WAN** card w/ addr/gateway/DNS/MAC/link-speed/MTU/method + multi-homed uplinks), **Live health** (CPU-util%, memory%, SoC-temp as color-zoned **radial gauges**; uptime + load; **network** as a scrolling area chart — numeric-JSON SSE at 1s), **Peripherals** (USB, block/removable, **CAN** w/ bitrate+state+errors, serial, I²C/SPI/GPIO — 4s poll).
 - **Network** — read via NM D-Bus; IPv4 edit with confirm-or-revert (NM checkpoints); **Wi-Fi station management** — interface selector, manual scan, click-to-connect dialog (passphrase), connected-details panel, disconnect/forget.
 - **Theme** — light/dark toggle in the topbar (persisted in localStorage, applied pre-paint; full dark palette in tokens.css). Light is the default.
 - **Containers** — list, live logs (SSE), start/stop/restart (self-guardrail).

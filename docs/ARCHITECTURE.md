@@ -23,7 +23,7 @@ Primary goals:
 
 | Feature | Status |
 |---------|--------|
-| **System / board info** — module, OS, serial, **kernel card** (release/arch/SMP/PREEMPT/toolchain/build-date from /proc/version), **processor** (SoC + live freq bar), storage (partitions/mounts/usage), connectivity | ✅ |
+| **System / board info** — module, OS, serial, **kernel card** (release/arch/SMP/PREEMPT/toolchain/build-date from /proc/version), **processor** (SoC + live freq bar), storage (partitions/mounts/usage), **connectivity/WAN** card (addr/gateway/DNS/MAC/link-speed/MTU/method, multi-homed) | ✅ |
 | **Live health** — CPU-util / memory / SoC temp as color-zoned **radial gauges**, uptime/load, network **area chart** (1s numeric-JSON SSE) | ✅ |
 | **Peripherals** — USB, block/removable media, **CAN** (bitrate/state/errors via rtnetlink), serial, I²C/SPI/GPIO (sysfs, polled) | ✅ |
 | **Network configuration** — view + IPv4 edit via NetworkManager, confirm-or-revert anti-lockout; **Wi-Fi station management** (selector, scan, connect dialog, connected panel, disconnect/forget) | ✅ |
@@ -367,6 +367,7 @@ Finding: NetworkManager **writes are permitted from the unprivileged container**
 **Phase 2.6 — Dashboard & Network refinements** — ✅ _complete (validated on-device)_
 - **Dashboard live section redesigned:** CPU-util / memory / SoC-temp as color-zoned **radial gauges** (CPU now true `/proc/stat` utilization, not load avg; temp scale/alarm from the thermal trip points); Processor tile leads with the **SoC** (`soc0/soc_id`) + a live **frequency bar**; network throughput is a smooth **area chart**. Transport switched to a compact numeric-JSON `/sse/metrics` tick rendered by `dashboard.js`.
 - **Kernel card:** `/proc/version` parsed into release/arch/toolchain/binutils/build/date + raw fallback (`internal/hal/kernel.go`).
+- **Connectivity/WAN card:** the primary uplink (lowest-metric default route from `/proc/net/route`) with address/gateway/DNS/MAC/method/profile (NetworkManager) + link speed/duplex/MTU (sysfs), and a footer listing other live uplinks (multi-homed).
 - **CAN enrichment:** bitrate, controller state, sample-point, clock, FD, error counters via **pure-Go rtnetlink** (`internal/sysinfo/can_netlink.go`) + sysfs traffic counters.
 - **Wi-Fi station management:** interface selector, manual scan, click-to-connect dialog, connected-details panel, disconnect/forget (NM `Device.Wireless`).
 - **Light/dark theme toggle:** top-bar control, persisted in `localStorage`, applied pre-paint; the dark palette in `tokens.css` was completed so all token-styled components render correctly in both themes.
