@@ -73,14 +73,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 /* ============ Content ============ */
 .content { padding: 26px 32px 48px; max-width: 1180px; }
 
-.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 26px; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 26px; flex-wrap: wrap; }
 .topbar .titles h1 { line-height: 1.2; }
 .topbar .titles .crumb { color: var(--color-text-muted); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.02em; }
 
 .device-chip { display: inline-flex; align-items: center; gap: 7px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 999px; padding: 7px 14px 7px 11px; box-shadow: var(--shadow-sm); font-size: 0.82rem; white-space: nowrap; }
-.device-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--status-ok); box-shadow: 0 0 0 3px var(--status-ok-bg); }
-.device-chip strong { color: var(--color-heading); font-weight: 700; }
-.device-chip .muted { color: var(--color-text-muted); }
+.device-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--status-ok); box-shadow: 0 0 0 3px var(--status-ok-bg); flex: 0 0 8px; }
+.device-chip .device-name { color: var(--color-heading); font-weight: 600; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 
@@ -214,7 +213,7 @@ input:focus, select:focus { outline: none; border-color: var(--color-accent); bo
 .logbox div:hover { background: rgba(255,255,255,0.04); }
 
 /* ============ Responsive ============ */
-@media (max-width: 820px) {
+@media (max-width: 720px) {
   .app { grid-template-columns: 1fr; }
   .sidebar { position: static; height: auto; flex-direction: row; align-items: center; overflow-x: auto; gap: 8px; }
   .sidebar .brand { padding: 4px; }

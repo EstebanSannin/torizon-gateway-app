@@ -39,7 +39,10 @@
       if (typeof e.data === 'string') term.write(e.data);
       else term.write(new Uint8Array(e.data));
     };
-    ws.onclose = function () { term.write('\r\n\x1b[90m*** disconnected ***\x1b[0m\r\n'); };
+    ws.onclose = function () {
+      term.write('\r\n\x1b[90m*** disconnected ***\x1b[0m\r\n');
+      document.getElementById('connbar').style.display = '';  // allow reconnect
+    };
     term.onData(function (d) {
       if (ws && ws.readyState === 1) ws.send(new TextEncoder().encode(d));
     });
