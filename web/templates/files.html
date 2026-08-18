@@ -1,0 +1,41 @@
+{{define "content"}}
+<div class="page-header">
+  <div class="crumbs">
+    {{range $i, $c := .Crumbs}}{{if $i}}<span class="sep">/</span>{{end}}<a href="/files?path={{urlq $c.Path}}">{{if eq $c.Name "/"}}host{{else}}{{$c.Name}}{{end}}</a>{{end}}
+  </div>
+  <span class="badge badge--plain">read-only</span>
+</div>
+
+{{if .Err}}
+  <div class="card"><p class="form-error" style="margin:0">{{.Err}}</p></div>
+{{else}}
+  <div class="table-wrap"><div class="table-scroll">
+  <table>
+    <thead><tr><th>Name</th><th>Size</th><th>Mode</th><th>Modified</th></tr></thead>
+    <tbody>
+      {{if ne .Path "/"}}
+      <tr><td colspan="4"><a href="/files?path={{urlq .Parent}}">↑ parent directory</a></td></tr>
+      {{end}}
+      {{$path := .Path}}
+      {{range .Entries}}
+      <tr>
+        <td>
+          {{if .IsDir}}
+            <a href="/files?path={{urlq (printf "%s/%s" $path .Name)}}">📁 {{.Name}}{{if .IsLink}} ↗{{end}}</a>
+          {{else}}
+            <a href="/files/view?path={{urlq (printf "%s/%s" $path .Name)}}">📄 {{.Name}}{{if .IsLink}} ↗{{end}}</a>
+          {{end}}
+        </td>
+        <td class="muted">{{if .IsDir}}—{{else}}{{hbytes .Size}}{{end}}</td>
+        <td><span class="mono">{{.Mode}}</span></td>
+        <td class="muted">{{if not .ModTime.IsZero}}{{.ModTime.Format "2006-01-02 15:04"}}{{end}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="4"><div class="empty">Empty directory.</div></td></tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div></div>
+  <p class="muted" style="margin-top:12px; font-size:0.82rem">Read-only. Editing (confined to <code>/etc</code> and <code>/var</code>) is the next step.</p>
+{{end}}
+{{end}}

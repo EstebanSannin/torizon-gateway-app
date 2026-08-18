@@ -12,6 +12,7 @@ import (
 	"github.com/toradex/torizon-gateway-app/internal/auth"
 	"github.com/toradex/torizon-gateway-app/internal/config"
 	"github.com/toradex/torizon-gateway-app/internal/containers"
+	"github.com/toradex/torizon-gateway-app/internal/files"
 	"github.com/toradex/torizon-gateway-app/internal/hal"
 	"github.com/toradex/torizon-gateway-app/internal/logs"
 	"github.com/toradex/torizon-gateway-app/internal/network"
@@ -30,6 +31,7 @@ type Server struct {
 	store       *store.Store
 	peripherals *sysinfo.Peripherals
 	syslogs     *logs.Service
+	files       *files.Service
 	mux         *http.ServeMux
 
 	pendMu  sync.Mutex
@@ -42,6 +44,7 @@ func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, net *n
 		cfg: cfg, board: board, containers: cnt, network: net, auth: a, store: st,
 		peripherals: sysinfo.NewPeripherals(cfg.SysfsPath, cfg.HostRoot),
 		syslogs:     logs.New(cfg.HostRoot),
+		files:       files.New(cfg.HostRoot),
 		mux:         http.NewServeMux(),
 		pending:     make(map[string]pendingChange),
 	}
@@ -84,6 +87,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /containers/{id}/restart", s.requireAuth(s.handleContainerAction("restart")))
 	s.mux.HandleFunc("GET /updates", s.requireAuth(s.handleUpdates))
 	s.mux.HandleFunc("GET /logs", s.requireAuth(s.handleLogsPage))
+	s.mux.HandleFunc("GET /files", s.requireAuth(s.handleFiles))
+	s.mux.HandleFunc("GET /files/view", s.requireAuth(s.handleFileView))
 
 	// HTML fragments (htmx) — protected.
 	s.mux.HandleFunc("GET /fragment/peripherals", s.requireAuth(s.handlePeripheralsFragment))

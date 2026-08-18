@@ -1,0 +1,26 @@
+{{define "content"}}
+<div class="page-header">
+  <div class="crumbs">
+    {{range $i, $c := .Crumbs}}{{if $i}}<span class="sep">/</span>{{end}}<a href="/files?path={{urlq $c.Path}}">{{if eq $c.Name "/"}}host{{else}}{{$c.Name}}{{end}}</a>{{end}}
+  </div>
+  <a class="btn btn--ghost btn--sm" href="/files?path={{urlq .Parent}}">↑ back</a>
+</div>
+
+{{if .Err}}
+  <div class="card"><p class="form-error" style="margin:0">{{.Err}}</p></div>
+{{else}}
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex; gap:20px; flex-wrap:wrap; font-size:0.85rem">
+      <span class="muted">Size <strong style="color:var(--color-text)">{{hbytes .View.Size}}</strong></span>
+      <span class="muted">Mode <span class="mono">{{.View.Mode}}</span></span>
+      <span class="muted">Modified {{.View.ModTime.Format "2006-01-02 15:04:05"}}</span>
+    </div>
+  </div>
+  {{if .View.Binary}}
+    <div class="card"><p class="muted" style="margin:0">Binary file — {{hbytes .View.Size}}, not shown.</p></div>
+  {{else}}
+    {{if .View.Truncated}}<div class="callout callout--warn" style="margin-bottom:12px">File is large — showing the first 1 MiB only.</div>{{end}}
+    <pre class="codeview">{{.View.Content}}</pre>
+  {{end}}
+{{end}}
+{{end}}

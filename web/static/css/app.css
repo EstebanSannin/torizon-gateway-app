@@ -184,6 +184,17 @@ input:focus, select:focus { outline: none; border-color: var(--color-accent); bo
 .auth-form { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
 .auth-form .btn--primary { justify-content: center; padding: 11px; margin-top: 4px; }
 
+/* ============ File explorer ============ */
+.crumbs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.9rem; }
+.crumbs .sep { color: var(--color-text-muted); }
+.crumbs a { font-weight: 600; }
+.codeview {
+  background: var(--color-surface); color: var(--color-text);
+  border: 1px solid var(--color-border); border-radius: 12px; box-shadow: var(--shadow-sm);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82rem; line-height: 1.55;
+  padding: 16px; max-height: 68vh; overflow: auto; white-space: pre; margin: 0;
+}
+
 /* ============ Log viewer ============ */
 .logbox {
   background: #04182E; color: #CFE3F7; border: 1px solid #0B2c4d;
