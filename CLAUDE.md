@@ -37,7 +37,7 @@ internal/logs/                systemd journal + kernel via journalctl (host bina
 internal/files/               host filesystem browse (read-only, traversal-safe) + edit/upload/delete confined to /etc,/var
 internal/terminal/            web SSH shell: x/crypto/ssh to localhost, proxied over a WebSocket (gorilla)
 internal/cloud/               Torizon Cloud/OTA status via aktualizr-info (host binary) + process status via /proc scan
-internal/updates/             [roadmap] offline Lockbox apply; currently the Updates page shows OS version only
+internal/updates/             aktualizr config parse (merged conf.d) + D-Bus client (org.uptane.Aktualizr): CheckForUpdates, status; SetPolling (writes fragment + RestartUnit via systemd D-Bus). Offline Lockbox apply is roadmap (D-Bus OfflineUpdate method exists)
 web/embed.go                  //go:embed templates + static
 web/templates/                base.html + one file per page ({{define "content"}}) + fragment_*.html (htmx-polled)
 web/static/css/               tokens.css (brand; light + full dark palette) + app.css (components)
@@ -69,6 +69,7 @@ docs/                         ARCHITECTURE.md, DESIGN-SYSTEM.md
 - **rtnetlink (CAN):** CAN controller details (bitrate, ERROR-ACTIVE/BUS-OFF state, sample-point, clock, FD, error counters) live only in netlink IFLA_CAN_* attrs — read in pure Go via `syscall.NetlinkRIB(RTM_GETLINK)`, no `ip` binary. Traffic counters come from sysfs `statistics/`.
 - **Terminal:** SSH to a **fixed** target (`127.0.0.1:22`, never client-supplied) using the user's board credentials; proxied over a WebSocket to xterm.js.
 - **Process status (cloud):** scan `<hostRoot>/proc/*/comm` for `aktualizr*` and `rac` — no systemd/D-Bus dependency.
+- **aktualizr control (updates):** the update client owns the system D-Bus name **`org.uptane.Aktualizr`** (`/org/uptane/aktualizr`) — methods `CheckForUpdates` / `Consent(b,s)` / `OfflineUpdate(s)` / `Cancel`, properties `ConsentRequired` / `InstallUpdatesAutomatically`. "Check now" is a clean `CheckForUpdates` call (no daemon restart). Changing the **polling interval** writes `/etc/sota/conf.d/60-polling-interval.toml` and restarts the client via **systemd D-Bus** (`org.freedesktop.systemd1.Manager.RestartUnit`). ECU/target list + real up-to-date comparison come from `aktualizr-info` (reused from `internal/cloud`; director-targets desired-hash vs installed).
 
 ## Deployment (dev container vs native)
 
@@ -123,9 +124,10 @@ The m920x is logged into Docker Hub as `samnite`; never handle registry credenti
 - **Files** — browse read-only; edit/upload/delete confined to /etc,/var (secrets denylist, off by default).
 - **Terminal** — in-browser SSH shell (off by default).
 - **Torizon Cloud** — provisioning, device, update state, subsystems (expandable containers), aktualizr + remote-access process status.
+- **Updates** — aktualizr **configuration** (Online/Offline mode, server, polling, rollback, install policy), **current state** (OS/version/OSTree deployment, up-to-date/available/updating), **ECU/target list** (primary + secondaries with per-ECU up-to-date via director-targets), **Check now** (D-Bus), and **editable polling interval** (write + restart). Offline Lockbox apply + per-update approval (Consent) are the remaining Phase-3 pieces.
 - **Auth** — first-boot, argon2id, sessions, CSRF, audit.
 
-**Remaining:** **automated testing + CI** (none yet — unit tests for the pure-Go parsers first, then handler/template tests + GitHub Actions; manual colleague testing in the near term), offline updates *apply* (Phase 3 — Lockbox), the **Yocto native build** (production deployment), hardening (TOTP, BYO cert, rate-limit), mDNS advertising (so `zinnia.local` resolves), and a parse-once template cache before GA. See ARCHITECTURE §15 backlog.
+**Remaining:** **automated testing + CI** (none yet — unit tests for the pure-Go parsers first, then handler/template tests + GitHub Actions; manual colleague testing in the near term), offline updates *apply* (Phase 3 — Lockbox; the aktualizr `OfflineUpdate` D-Bus method is the path, needs an offline-provisioned device to validate) + per-update **approval/Consent** flow, the **Yocto native build** (production deployment), hardening (TOTP, BYO cert, rate-limit), mDNS advertising (so `zinnia.local` resolves), and a parse-once template cache before GA. See ARCHITECTURE §15 backlog.
 
 ## Security rules for contributors
 

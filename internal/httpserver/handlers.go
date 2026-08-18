@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"strconv"
 	"strings"
 
+	"github.com/toradex/torizon-gateway-app/internal/cloud"
 	"github.com/toradex/torizon-gateway-app/internal/containers"
 	"github.com/toradex/torizon-gateway-app/internal/hal"
 	"github.com/toradex/torizon-gateway-app/internal/network"
+	"github.com/toradex/torizon-gateway-app/internal/updates"
 )
 
 // handleContainerAction performs start/stop/restart on a container, guarding
@@ -123,24 +126,91 @@ func (s *Server) handleContainerLogsSSE(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// updatesData is the template model for the read-only Updates view.
+// updatesData is the template model for the Updates view.
 type updatesData struct {
 	layout
 	PrettyName string
 	VersionID  string
 	Variant    string
 	Codename   string
+	Config     updates.Config
+	Status     updates.Status
+	Cloud      cloud.Info // ECUs/subsystems + update state (aktualizr-info)
+	Writable   bool       // polling config is editable
+	Notice     string
+	IsError    bool
+	Checked    bool // a check was just triggered
 }
 
-// handleUpdates shows the currently installed OS version. Applying offline
-// (Lockbox) updates is Phase 3 — see docs/ARCHITECTURE.md §8.4.
+// handleUpdates shows the update client configuration + state.
 func (s *Server) handleUpdates(w http.ResponseWriter, r *http.Request) {
+	notice := ""
+	if r.URL.Query().Get("polling") == "1" {
+		notice = "Polling interval updated — the update client was restarted."
+	}
+	s.renderUpdates(w, r, notice, false, r.URL.Query().Get("checked") == "1")
+}
+
+// handleUpdatesCheck triggers an aktualizr update check over D-Bus. Safe when
+// InstallUpdatesAutomatically is off (downloads but waits for consent); on
+// auto-install devices the browser confirms first.
+func (s *Server) handleUpdatesCheck(w http.ResponseWriter, r *http.Request) {
+	if !checkCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	if s.updates == nil {
+		s.renderUpdates(w, r, "Update client unavailable.", true, false)
+		return
+	}
+	if err := s.updates.CheckForUpdates(); err != nil {
+		_ = s.store.AddAudit(userFrom(r).Username, "update_check_failed", err.Error(), clientIP(r))
+		s.renderUpdates(w, r, "Could not trigger a check: "+err.Error(), true, false)
+		return
+	}
+	_ = s.store.AddAudit(userFrom(r).Username, "update_check", "triggered", clientIP(r))
+	http.Redirect(w, r, "/updates?checked=1", http.StatusSeeOther)
+}
+
+// handleUpdatesPolling writes a new polling interval and restarts aktualizr.
+func (s *Server) handleUpdatesPolling(w http.ResponseWriter, r *http.Request) {
+	if !checkCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	if s.updates == nil {
+		s.renderUpdates(w, r, "Update client unavailable.", true, false)
+		return
+	}
+	sec, _ := strconv.Atoi(strings.TrimSpace(r.PostFormValue("polling_sec")))
+	if err := s.updates.SetPolling(sec); err != nil {
+		_ = s.store.AddAudit(userFrom(r).Username, "update_polling_failed", err.Error(), clientIP(r))
+		s.renderUpdates(w, r, "Could not update polling interval: "+err.Error(), true, false)
+		return
+	}
+	_ = s.store.AddAudit(userFrom(r).Username, "update_polling", strconv.Itoa(sec)+"s", clientIP(r))
+	http.Redirect(w, r, "/updates?polling=1", http.StatusSeeOther)
+}
+
+func (s *Server) renderUpdates(w http.ResponseWriter, r *http.Request, notice string, isErr, checked bool) {
 	osr := hal.OSRelease()
-	render(w, "updates.html", updatesData{
+	data := updatesData{
 		layout:     s.layoutFor(w, r, "Updates", "updates"),
 		PrettyName: osr["PRETTY_NAME"],
 		VersionID:  osr["VERSION_ID"],
 		Variant:    osr["VARIANT"],
 		Codename:   osr["VERSION_CODENAME"],
-	})
+		Notice:     notice,
+		IsError:    isErr,
+		Checked:    checked,
+	}
+	if s.updates != nil {
+		data.Config = s.updates.ReadConfig()
+		data.Status = s.updates.Status()
+		data.Writable = s.updates.ConfigWritable()
+	}
+	if s.cloud != nil {
+		data.Cloud = s.cloud.Get(r.Context())
+	}
+	render(w, "updates.html", data)
 }

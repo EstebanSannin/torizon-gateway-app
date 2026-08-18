@@ -34,7 +34,8 @@ Primary goals:
 | **Web terminal** — in-browser SSH shell | ✅ |
 | **Torizon Cloud** — provisioning, device, update state, subsystems, daemon status | ✅ |
 | **Auth** — first-boot setup, argon2id, sessions, CSRF, audit | ✅ |
-| **Offline updates** — Torizon Secure Offline Updates (Lockbox) apply | ⏳ Phase 3 |
+| **Updates** — aktualizr config/mode, current state, ECU/target list (per-ECU up-to-date), Check-now (D-Bus), editable polling interval | ✅ |
+| **Offline updates** — Torizon Secure Offline Updates (Lockbox) apply + per-update approval (Consent) | ⏳ Phase 3 |
 
 ---
 
@@ -179,6 +180,7 @@ The container runs as `user: "0:0"` (root) — required for NetworkManager write
 /internal/files        host FS browse (traversal-safe) + edit/upload/delete confined to /etc,/var
 /internal/terminal     web SSH shell: x/crypto/ssh to localhost, WebSocket-proxied (gorilla)
 /internal/cloud        Torizon Cloud/OTA via aktualizr-info (host binary) + process status via /proc
+/internal/updates      aktualizr conf.d parse + org.uptane.Aktualizr D-Bus (check-now) + polling edit (write + systemd RestartUnit)
 /internal/updates      [roadmap] offline Lockbox apply
 /web                   templates, css, vendored htmx/alpine/xterm/inter, //go:embed
 ```
@@ -234,12 +236,11 @@ Trade-off accepted: no heavy client-side state. If a future screen truly needs i
 - **Guardrails:** the gateway-manager container **cannot stop itself**; warn on stopping other Torizon-critical services.
 - **Mechanism:** Docker socket API. No image building/pulling in MVP.
 
-### 8.4 Offline updates  (Torizon Secure Offline Updates / Lockbox)
-- **Input:** a signed **Lockbox** update bundle produced by Toradex tooling (TorizonCore Builder / Platform), delivered via **USB drive** or **web upload**.
-- **Flow:** detect/receive bundle → validate presence/metadata → stage into the host offline-update spool → trigger `aktualizr` offline apply → stream progress via SSE → report success/reboot/rollback.
-- **Scope:** OS + container app updates, whatever the Lockbox contains. Signature verification and rollback are handled by the **Torizon host** mechanism — we do **not** reimplement signing.
-- **Safety:** clear pre-apply summary (what's in the bundle, current vs target versions), explicit confirm, warn about reboot, surface Torizon's rollback result.
-- **This is the highest-complexity feature** — see roadmap (§15): a read-only "current version" view ships in phase 1; apply flow follows once the host trigger interface is pinned down (open decision 16.4).
+### 8.4 Updates  (aktualizr control + Torizon Secure Offline Updates)
+- **Built:** the Updates page reads the merged aktualizr `conf.d` (mode/server/polling/rollback/install-policy) and `aktualizr-info` (OS/version/OSTree deployment, ECU/target list with per-ECU up-to-date from director-targets), and drives the client over the system D-Bus name **`org.uptane.Aktualizr`** — **Check now** (`CheckForUpdates`), and an **editable polling interval** (write `/etc/sota/conf.d/60-polling-interval.toml` + restart via `systemd1.RestartUnit`). The daemon also exposes `Consent(b,s)` and `OfflineUpdate(s)` — so the once-open "host trigger interface" (former decision 16.4) is **resolved**: it's these D-Bus methods.
+- **Offline (roadmap):** a signed **Lockbox** bundle (TorizonCore Builder / Platform) via USB or web upload → stage to a path → call `OfflineUpdate(<path>)`. Signature verification + rollback stay in the **Torizon host** mechanism — we do **not** reimplement signing. Needs an offline-provisioned device to validate.
+- **Approval (roadmap):** opt-in "require approval" — the gateway becomes the consent manager (holds `InstallUpdatesAutomatically=0`, answers `ConsentRequired` with `Consent(true/false, target)`). Default is auto-install.
+- **Safety:** Check-now confirms (may install + reboot on an auto-install device); polling change confirms + restarts the client; both audited. Offline apply will show a pre-apply summary + explicit confirm.
 
 ---
 
