@@ -98,7 +98,7 @@ docker buildx --builder gwbuilder build --platform linux/arm64 -f deploy/Dockerf
   -t torizon-gateway:dev --output type=docker,dest=/tmp/gw-arm64.tar .
 # transfer /tmp/gw-arm64.tar → Verdin, then:  docker load && docker compose up -d
 ```
-The Verdin's compose lives at `~/gateway/docker-compose.yml`. Login for the dev device: `admin` / `SuperSecret123` (test account).
+The Verdin's compose lives at `~/gateway/docker-compose.yml`. Dev-device login is created at first boot and shared out-of-band (see the `dev-resources` memory) — never commit credentials.
 
 ## Current status
 
