@@ -156,8 +156,8 @@ type dashData struct {
 	CPU            sysinfo.CPU
 	CPUMinHuman    string
 	CPUMaxHuman    string
-	CPUMinMHz      int
 	CPUMaxMHz      int
+	FreqMinPct     float64 // min freq as % of max (the idle-floor marker)
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
@@ -180,8 +180,10 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	data.CPU = sysinfo.CPUInfo(s.cfg.SysfsPath)
 	data.CPUMinHuman = freqHuman(data.CPU.MinKHz)
 	data.CPUMaxHuman = freqHuman(data.CPU.MaxKHz)
-	data.CPUMinMHz = data.CPU.MinKHz / 1000
 	data.CPUMaxMHz = data.CPU.MaxKHz / 1000
+	if data.CPU.MaxKHz > 0 {
+		data.FreqMinPct = float64(data.CPU.MinKHz) / float64(data.CPU.MaxKHz) * 100
+	}
 	render(w, "dashboard.html", data)
 }
 

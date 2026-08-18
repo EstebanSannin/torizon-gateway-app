@@ -15,8 +15,11 @@
         <span class="freq-now"><span id="freqNow">—</span><span class="u">GHz</span></span>
         <span class="freq-gov">governor <code class="mono">{{.CPU.Governor}}</code></span>
       </div>
-      <div class="freq-bar"><div class="freq-fill" id="freqFill" data-min="{{.CPUMinMHz}}" data-max="{{.CPUMaxMHz}}"></div></div>
-      <div class="freq-ticks"><span>{{.CPUMinHuman}}</span><span>{{.CPUMaxHuman}} max</span></div>
+      <div class="freq-bar">
+        <div class="freq-fill" id="freqFill" data-max="{{.CPUMaxMHz}}"></div>
+        <div class="freq-min" style="left:{{printf "%.1f" .FreqMinPct}}%" title="idle floor {{.CPUMinHuman}}"></div>
+      </div>
+      <div class="freq-ticks"><span>min {{.CPUMinHuman}}</span><span>max {{.CPUMaxHuman}}</span></div>
     </div>
   </div>
   <div class="card tile">
@@ -92,7 +95,7 @@
       </svg>
       <div class="gauge-center"><div class="gauge-num"><span id="tempNum">0</span><span class="u">°C</span></div><div class="gauge-sub">SoC temp</div></div>
     </div>
-    <div class="gauge-cap">junction temperature</div>
+    <div class="gauge-cap" id="tempCap">junction temperature</div>
   </div>
 
   <div class="card tile">

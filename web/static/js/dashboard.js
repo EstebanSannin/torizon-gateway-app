@@ -65,16 +65,19 @@
     setGauge($('memArc'), $('memNum'), m.mem, zone(m.mem, 75, 90), Math.round(m.mem));
     setGauge($('tempArc'), $('tempNum'), m.temp / m.tempScale * 100,
       zone(m.temp, m.tempWarn, m.tempAlarm), m.temp.toFixed(1));
+    if ($('tempCap')) $('tempCap').textContent =
+      'scale 0–' + Math.round(m.tempScale) + ' °C · alarm ≥ ' + Math.round(m.tempAlarm) + ' °C';
 
     if ($('memUsed')) $('memUsed').textContent = fmtBytes(m.memUsed);
     if ($('load')) $('load').textContent = m.load.toFixed(2);
     if ($('uptime')) $('uptime').textContent = m.uptime;
 
-    // frequency bar (min/max carried as data-attrs, MHz)
+    // frequency bar: current clock as a fraction of max (always visible, floored
+    // at the idle min shown by the marker). data-max is in MHz.
     var fill = $('freqFill');
     if (fill && m.freqCur > 0) {
-      var lo = +fill.dataset.min, hi = +fill.dataset.max;
-      if (hi > lo) fill.style.width = (Math.max(0, Math.min(1, (m.freqCur - lo) / (hi - lo))) * 100).toFixed(1) + '%';
+      var hi = +fill.dataset.max;
+      if (hi > 0) fill.style.width = (Math.max(0, Math.min(1, m.freqCur / hi)) * 100).toFixed(1) + '%';
       $('freqNow').textContent = (m.freqCur / 1000).toFixed(2);
     }
 
