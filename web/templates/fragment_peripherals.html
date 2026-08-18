@@ -50,9 +50,31 @@
       <span class="label">CAN bus</span><span class="badge badge--plain">{{len .CAN}}</span>
     </div>
     {{range .CAN}}
-      <div style="display:flex; justify-content:space-between; gap:10px; border-top:1px solid var(--color-border); padding-top:8px">
-        <div style="font-weight:600"><span class="mono">{{.Name}}</span></div>
-        {{if eq .State "up"}}<span class="badge badge--running">up</span>{{else}}<span class="badge badge--stopped">{{if .State}}{{.State}}{{else}}down{{end}}</span>{{end}}
+      <div style="border-top:1px solid var(--color-border); padding-top:9px">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px">
+          <div style="font-weight:700">
+            <span class="mono">{{.Name}}</span>
+            {{if .FD}}<span class="badge badge--plain" title="CAN-FD">FD</span>{{end}}
+          </div>
+          <span class="badge {{.StateClass}}">{{.StateLabel}}</span>
+        </div>
+        {{if .Up}}
+          <table class="kv" style="margin-top:7px">
+            <tr><th>Bitrate</th><td><strong>{{.BitrateHuman}}</strong>{{if and .FD .DataBitrate}} <span class="muted">· data {{.DataBitrateHuman}}</span>{{end}}</td></tr>
+            <tr><th>Sample point</th><td>{{printf "%.1f%%" .SamplePointPct}}{{if .ClockMHz}} <span class="muted">· {{.ClockMHz}} MHz clock</span>{{end}}</td></tr>
+            <tr><th>Controller</th><td>{{.CANState}}</td></tr>
+            <tr><th>Traffic</th><td>↓ {{.RxPackets}} · ↑ {{.TxPackets}} frames</td></tr>
+          </table>
+          {{if .HasErrors}}
+            <div class="callout callout--warn" style="margin-top:8px; padding:8px 10px; font-size:0.76rem">
+              {{if .BusOff}}bus-off {{.BusOff}} · {{end}}{{if .ErrorPassive}}passive {{.ErrorPassive}} · {{end}}{{if .ErrorWarning}}warn {{.ErrorWarning}} · {{end}}{{if .BusErrors}}bus-err {{.BusErrors}} · {{end}}{{if .ArbLost}}arb-lost {{.ArbLost}} · {{end}}{{if .Restarts}}restarts {{.Restarts}} · {{end}}berr tx {{.BusErrTx}}/rx {{.BusErrRx}}
+            </div>
+          {{else}}
+            <div class="muted" style="font-size:0.75rem; margin-top:6px">no bus errors</div>
+          {{end}}
+        {{else}}
+          <div class="muted" style="font-size:0.8rem; margin-top:4px">interface down</div>
+        {{end}}
       </div>
     {{else}}<div class="muted" style="font-size:0.85rem">No CAN interfaces.</div>{{end}}
   </div>

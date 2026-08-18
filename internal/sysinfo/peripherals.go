@@ -183,29 +183,143 @@ func fillUsage(part Partition, hostRoot string) Partition {
 	return part
 }
 
-// CANInterface is a CAN bus network interface.
+// CANInterface is a CAN bus network interface, enriched with the netlink
+// controller details (bitrate, state, error counters) and sysfs traffic stats.
 type CANInterface struct {
 	Name  string
-	State string // "up" / "down"
+	State string // link operstate: "up" / "down"
+
+	// Netlink CAN controller details (zero/empty when the link is down or
+	// netlink is unavailable).
+	CANState    string // ERROR-ACTIVE / ERROR-WARNING / ERROR-PASSIVE / BUS-OFF / STOPPED
+	Bitrate     int    // nominal bitrate, bit/s
+	SamplePoint float64
+	FD          bool // CAN-FD enabled
+	DataBitrate int  // FD data-phase bitrate, bit/s
+	ClockHz     int
+	RestartMs   int
+	BusErrTx    int
+	BusErrRx    int
+
+	// Controller error tallies (health — surface when non-zero).
+	BusOff       int
+	ErrorWarning int
+	ErrorPassive int
+	ArbLost      int
+	Restarts     int
+	BusErrors    int
+
+	// Traffic counters (sysfs statistics).
+	RxPackets uint64
+	TxPackets uint64
+	RxBytes   uint64
+	TxBytes   uint64
+	RxErrors  uint64
+	TxErrors  uint64
 }
 
-// CAN lists CAN interfaces from /sys/class/net/can*.
+// Up reports whether the link is administratively/operationally up.
+func (c CANInterface) Up() bool { return c.State == "up" }
+
+// HasErrors reports whether any controller error tally is non-zero.
+func (c CANInterface) HasErrors() bool {
+	return c.BusOff+c.ErrorWarning+c.ErrorPassive+c.ArbLost+c.Restarts+c.BusErrors+c.BusErrTx+c.BusErrRx > 0
+}
+
+// StateLabel is a short, friendly controller-state word for the badge.
+func (c CANInterface) StateLabel() string {
+	switch c.CANState {
+	case "ERROR-ACTIVE":
+		return "active"
+	case "ERROR-WARNING":
+		return "warning"
+	case "ERROR-PASSIVE":
+		return "passive"
+	case "BUS-OFF":
+		return "bus-off"
+	case "STOPPED":
+		return "stopped"
+	case "SLEEPING":
+		return "sleeping"
+	default:
+		if c.State != "" {
+			return c.State
+		}
+		return "down"
+	}
+}
+
+// StateClass maps the controller state to a badge colour variant.
+func (c CANInterface) StateClass() string {
+	switch c.CANState {
+	case "ERROR-ACTIVE":
+		return "badge--running"
+	case "ERROR-WARNING", "ERROR-PASSIVE":
+		return "badge--warn"
+	case "BUS-OFF":
+		return "badge--error"
+	default:
+		return "badge--stopped"
+	}
+}
+
+// BitrateHuman / DataBitrateHuman format a CAN bitrate ("500 kbit/s", "1 Mbit/s").
+func (c CANInterface) BitrateHuman() string     { return canRate(c.Bitrate) }
+func (c CANInterface) DataBitrateHuman() string { return canRate(c.DataBitrate) }
+
+// SamplePointPct returns the sample point as a percentage (0.875 → 87.5).
+func (c CANInterface) SamplePointPct() float64 { return c.SamplePoint * 100 }
+
+// ClockMHz returns the controller clock in MHz.
+func (c CANInterface) ClockMHz() int { return c.ClockHz / 1_000_000 }
+
+func canRate(bps int) string {
+	switch {
+	case bps <= 0:
+		return "—"
+	case bps%1_000_000 == 0:
+		return strconv.Itoa(bps/1_000_000) + " Mbit/s"
+	case bps >= 1_000_000:
+		return strconv.FormatFloat(float64(bps)/1_000_000, 'f', 1, 64) + " Mbit/s"
+	default:
+		return strconv.Itoa(bps/1000) + " kbit/s"
+	}
+}
+
+// CAN lists CAN interfaces from /sys/class/net/can*, enriched with rtnetlink
+// controller details and sysfs traffic counters.
 func (p *Peripherals) CAN() []CANInterface {
 	base := filepath.Join(p.Sysfs, "class/net")
 	entries, err := os.ReadDir(base)
 	if err != nil {
 		return nil
 	}
+	nl := canDetails()
 	var out []CANInterface
 	for _, e := range entries {
 		name := e.Name()
 		if !strings.HasPrefix(name, "can") {
 			continue
 		}
-		out = append(out, CANInterface{
-			Name:  name,
-			State: readTrim(filepath.Join(base, name, "operstate")),
-		})
+		dir := filepath.Join(base, name)
+		c := CANInterface{
+			Name:      name,
+			State:     readTrim(filepath.Join(dir, "operstate")),
+			RxPackets: readUint(filepath.Join(dir, "statistics/rx_packets")),
+			TxPackets: readUint(filepath.Join(dir, "statistics/tx_packets")),
+			RxBytes:   readUint(filepath.Join(dir, "statistics/rx_bytes")),
+			TxBytes:   readUint(filepath.Join(dir, "statistics/tx_bytes")),
+			RxErrors:  readUint(filepath.Join(dir, "statistics/rx_errors")),
+			TxErrors:  readUint(filepath.Join(dir, "statistics/tx_errors")),
+		}
+		if d, ok := nl[name]; ok {
+			c.CANState, c.Bitrate, c.SamplePoint = d.State, d.Bitrate, d.SamplePoint
+			c.FD, c.DataBitrate, c.ClockHz, c.RestartMs = d.FD, d.DataBitrate, d.ClockHz, d.RestartMs
+			c.BusErrTx, c.BusErrRx = d.BusErrTx, d.BusErrRx
+			c.BusOff, c.ErrorWarning, c.ErrorPassive = d.BusOff, d.ErrorWarning, d.ErrorPassive
+			c.ArbLost, c.Restarts, c.BusErrors = d.ArbLost, d.Restarts, d.BusErrors
+		}
+		out = append(out, c)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
@@ -319,6 +433,11 @@ func readTrim(path string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(b))
+}
+
+func readUint(path string) uint64 {
+	n, _ := strconv.ParseUint(readTrim(path), 10, 64)
+	return n
 }
 
 func transportOf(name, sysfsLink string) string {
