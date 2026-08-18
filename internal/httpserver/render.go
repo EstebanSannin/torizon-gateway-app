@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"net/url"
 
 	"github.com/toradex/torizon-gateway-app/web"
 )
@@ -12,7 +11,6 @@ import (
 // tmplFuncs are helpers available in every template.
 var tmplFuncs = template.FuncMap{
 	"hbytes": humanBytes,
-	"urlq":   url.QueryEscape,
 }
 
 // render parses base.html + the given page file (both from the embedded FS) and

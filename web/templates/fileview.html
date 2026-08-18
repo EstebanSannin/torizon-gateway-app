@@ -1,9 +1,9 @@
 {{define "content"}}
 <div class="page-header">
   <div class="crumbs">
-    {{range $i, $c := .Crumbs}}{{if $i}}<span class="sep">/</span>{{end}}<a href="/files?path={{urlq $c.Path}}">{{if eq $c.Name "/"}}host{{else}}{{$c.Name}}{{end}}</a>{{end}}
+    {{range $i, $c := .Crumbs}}{{if $i}}<span class="sep">/</span>{{end}}<a href="/files?path={{$c.Path}}">{{if eq $c.Name "/"}}host{{else}}{{$c.Name}}{{end}}</a>{{end}}
   </div>
-  <a class="btn btn--ghost btn--sm" href="/files?path={{urlq .Parent}}">↑ back</a>
+  <a class="btn btn--ghost btn--sm" href="/files?path={{.Parent}}">↑ back</a>
 </div>
 
 {{if .Err}}
