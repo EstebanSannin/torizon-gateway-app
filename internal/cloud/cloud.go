@@ -13,21 +13,25 @@ import (
 	"strings"
 )
 
-// Service runs aktualizr-info.
+// Service runs aktualizr-info and inspects cloud-related processes.
 type Service struct {
-	base []string // argv prefix that runs aktualizr-info
+	base     []string // argv prefix that runs aktualizr-info
+	hostRoot string   // where the host "/" is visible (for /proc scanning)
 }
 
 // New builds the service. hostRoot is "/" natively or "/host" in a container;
 // cfgDir is a writable directory for the generated aktualizr config (the app's
 // data dir — the distroless container has no writable /tmp).
 func New(hostRoot, cfgDir string) *Service {
-	if hostRoot == "" || hostRoot == "/" {
-		return &Service{base: []string{"aktualizr-info"}}
+	if hostRoot == "" {
+		hostRoot = "/"
+	}
+	if hostRoot == "/" {
+		return &Service{base: []string{"aktualizr-info"}, hostRoot: hostRoot}
 	}
 	ld := firstGlob(filepath.Join(hostRoot, "lib/ld-*.so*"), filepath.Join(hostRoot, "lib64/ld-*.so*"))
 	if ld == "" {
-		return &Service{base: []string{"aktualizr-info"}}
+		return &Service{base: []string{"aktualizr-info"}, hostRoot: hostRoot}
 	}
 	if cfgDir == "" {
 		cfgDir = os.TempDir()
@@ -41,9 +45,12 @@ func New(hostRoot, cfgDir string) *Service {
 		filepath.Join(hostRoot, "lib"), filepath.Join(hostRoot, "lib64"),
 		filepath.Join(hostRoot, "usr/lib"), filepath.Join(hostRoot, "usr/lib/systemd"),
 	}, globDirs(filepath.Join(hostRoot, "usr/lib/*-linux-gnu"))...), ":")
-	return &Service{base: []string{
-		ld, "--library-path", libPath, filepath.Join(hostRoot, "usr/bin/aktualizr-info"), "-c", cfg,
-	}}
+	return &Service{
+		hostRoot: hostRoot,
+		base: []string{
+			ld, "--library-path", libPath, filepath.Join(hostRoot, "usr/bin/aktualizr-info"), "-c", cfg,
+		},
+	}
 }
 
 // Subsystem is an ECU/secondary tracked by the cloud (OS, docker-compose, ...).
@@ -58,9 +65,17 @@ type Subsystem struct {
 	HasTarget     bool // aktualizr reports a target for it
 }
 
+// ProcStatus reports whether a cloud-critical process is running.
+type ProcStatus struct {
+	Title   string
+	Unit    string
+	Running bool
+}
+
 // Info is the parsed cloud/OTA state.
 type Info struct {
 	Available       bool
+	Services        []ProcStatus
 	DeviceID        string
 	DeviceName      string
 	Provisioned     bool
@@ -70,15 +85,18 @@ type Info struct {
 	LastCorrelation string
 }
 
-// Get returns the current cloud state.
+// Get returns the current cloud state (process status is always populated, even
+// when aktualizr-info is unavailable).
 func (s *Service) Get(ctx context.Context) Info {
+	services := s.processStatus()
 	out, _ := s.run(ctx)
 	// aktualizr-info may exit non-zero yet print valid output; trust the content.
 	if !strings.Contains(out, "Device ID:") {
-		return Info{Available: false}
+		return Info{Available: false, Services: services}
 	}
 	info := parseInfo(out)
 	info.Available = true
+	info.Services = services
 
 	if name, err := s.run(ctx, "--name-only"); err == nil {
 		// Only keep it as a "name" when it differs from the UUID (some setups

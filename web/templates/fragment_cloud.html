@@ -1,4 +1,17 @@
 {{define "cloud"}}
+<div class="section-title"><h2>Cloud services</h2><span class="rule"></span></div>
+<div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); margin-bottom:8px">
+  {{range .Info.Services}}
+  <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:10px">
+    <div>
+      <div style="font-weight:600">{{.Title}}</div>
+      <div class="mono muted" style="font-size:0.75rem">{{.Unit}}</div>
+    </div>
+    {{if .Running}}<span class="badge badge--running">running</span>{{else}}<span class="badge badge--error">stopped</span>{{end}}
+  </div>
+  {{end}}
+</div>
+
 {{if not .Info.Available}}
   <div class="card">
     <p style="margin-top:0">Cloud / OTA status is unavailable — <code>aktualizr-info</code> could not be read.</p>
