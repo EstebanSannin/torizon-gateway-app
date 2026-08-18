@@ -81,7 +81,9 @@ func (s *Service) Get(ctx context.Context) Info {
 	info.Available = true
 
 	if name, err := s.run(ctx, "--name-only"); err == nil {
-		if n := strings.TrimSpace(lastLine(name)); n != "" {
+		// Only keep it as a "name" when it differs from the UUID (some setups
+		// return a friendly name; here it's the UUID, which we show anyway).
+		if n := strings.TrimSpace(lastLine(name)); n != "" && n != info.DeviceID {
 			info.DeviceName = n
 		}
 	}
@@ -116,10 +118,11 @@ func (s *Service) Get(ctx context.Context) Info {
 
 func (s *Service) run(ctx context.Context, args ...string) (string, error) {
 	argv := append(append([]string{}, s.base...), args...)
-	// Output() returns stdout only, so the OpenSSL 'legacy provider' warning on
-	// stderr doesn't pollute parsing.
 	out, err := exec.CommandContext(ctx, argv[0], argv[1:]...).Output()
-	return string(out), err
+	// aktualizr-info prints a benign "could not load 'legacy' OpenSSL provider"
+	// notice that can get prepended to output; strip it so it never surfaces.
+	clean := strings.ReplaceAll(string(out), "Warning: could not load 'legacy' OpenSSL provider", "")
+	return clean, err
 }
 
 // parseInfo extracts device + subsystem details from aktualizr-info output.

@@ -13,8 +13,8 @@
     </div>
     <div class="card tile" style="grid-column: span 2;">
       <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><span class="label">Device</span></div>
-      <div class="value sm">{{if .Info.DeviceName}}{{.Info.DeviceName}}{{else}}—{{end}}</div>
-      <div class="sub mono">{{.Info.DeviceID}}</div>
+      <div class="value sm mono" style="font-size:0.95rem; word-break:break-all">{{.Info.DeviceID}}</div>
+      <div class="sub">{{if .Info.DeviceName}}{{.Info.DeviceName}}{{else}}Torizon Cloud device{{end}}</div>
     </div>
     <div class="card tile">
       <div class="tile-head"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg></span><span class="label">Update state</span></div>
