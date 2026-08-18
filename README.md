@@ -27,6 +27,12 @@ From a browser on the local network, an operator can manage the device without a
 - **Dev:** a Torizon container with elevated host access (host networking, `/host` mount, docker/D-Bus sockets). Fast build→load→run loop.
 - **Production (planned): native via Yocto** (a bitbake recipe + systemd service). Torizon runs a single docker-compose and wipes other containers when a customer app deploys, so the gateway must run natively to always be present. The same binary runs both ways.
 
+**Container images** — published multi-arch (linux/arm64, linux/arm/v7, linux/amd64) at [`samnite/torizon-gateway`](https://hub.docker.com/r/samnite/torizon-gateway):
+
+```bash
+docker pull samnite/torizon-gateway:latest
+```
+
 ## Documentation
 
 - 📐 [Architecture & Specification](docs/ARCHITECTURE.md) — design, privilege model, feature specs, data-access patterns, roadmap.

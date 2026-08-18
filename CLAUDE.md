@@ -104,6 +104,13 @@ docker buildx --builder gwbuilder build --platform linux/arm64 -f deploy/Dockerf
 ```
 The Verdin's compose lives at `~/gateway/docker-compose.yml`. Dev-device login is created at first boot and shared out-of-band (see the `dev-resources` memory) — never commit credentials.
 
+**Multi-arch publish.** The Dockerfile is target-aware (`--platform=$BUILDPLATFORM` build stage cross-compiles per `TARGETARCH`/`TARGETVARIANT`; `GOARM` set for arm/v7). Published images live at **`samnite/torizon-gateway`** on Docker Hub (`:latest` + a version tag) for **linux/arm64, linux/arm/v7, linux/amd64**:
+```bash
+docker buildx --builder gwbuilder build --platform linux/arm64,linux/arm/v7,linux/amd64 \
+  -f deploy/Dockerfile -t samnite/torizon-gateway:latest -t samnite/torizon-gateway:<ver> --push .
+```
+The m920x is logged into Docker Hub as `samnite`; never handle registry credentials in-session (`docker login` is done out-of-band).
+
 ## Current status
 
 **Phases 0–2 complete and validated on a Verdin iMX8M Plus (Torizon OS 7.7.0), plus a large "Diagnostics/Cloud" set and a full brand design pass:**

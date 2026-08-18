@@ -6,13 +6,15 @@
 FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
+ARG TARGETVARIANT
 WORKDIR /src
 # Cache modules first.
 COPY go.mod go.sum ./
 RUN go mod download
 # App sources (UI is embedded via //go:embed, so web/ must be present at build).
 COPY . .
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+# GOARM comes from the platform variant (arm/v7 -> 7); empty/ignored otherwise.
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOARM="${TARGETVARIANT#v}" \
     go build -trimpath -ldflags="-s -w" -o /out/gateway-manager ./cmd/gateway-manager
 
 # ---- Runtime stage (minimal) ----
