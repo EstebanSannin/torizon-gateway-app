@@ -39,5 +39,9 @@
     {{end}}
   </div>
   <p class="muted" style="margin-top:14px; font-size:0.82rem">Changes apply behind a confirm-or-revert window — if a change cuts connectivity it reverts automatically.</p>
+
+  <div id="wifi-section" style="margin-top:26px" hx-get="/network/wifi" hx-trigger="load" hx-swap="innerHTML">
+    <div class="card"><p class="muted" style="margin:0">Loading Wi-Fi…</p></div>
+  </div>
 {{end}}
 {{end}}
