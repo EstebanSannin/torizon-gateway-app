@@ -133,7 +133,7 @@ The app needs to *read* host state and *mutate* network + containers + updates. 
 - **D-Bus access is proxied/filtered.** Rather than raw access to the whole system bus, we front NetworkManager with a **D-Bus filter** (allow-list of NM interfaces/methods) so a compromised UI can't reach unrelated services. *(Open decision 16.2: `dbus-proxy` sidecar vs. an in-process allow-list.)*
 - **Docker socket exposure is acknowledged as the biggest risk.** The socket grants root-equivalent power on the host. Mitigations: run the container's own process as non-root where possible, keep the API surface we call minimal and validated, and treat "container management" write actions as privileged operations gated behind auth + audit. *(Open decision 16.3: consider a thin socket-proxy that allow-lists only the Docker endpoints we use.)*
 - **All state-changing actions are audited** (who, what, when) to the local store.
-- **Docker socket access from a non-root container:** the socket is `root:docker`, so the container process must be in the host's `docker` group. On-device we run the container as the device user and add the host docker GID via compose `group_add` (validated on Torizon: gid 990). The socket-proxy backlog item would remove this exposure.
+- **Container runs as root (`user: "0:0"`).** A non-root container was attempted (`group_add` docker gid 990 / systemd-journal 988) but doesn't support the full feature set: NetworkManager config writes are authorized by **polkit for root** (denied for the anonymous container uid), and the app must create its state dir on `/data`. Since the Docker-socket and system-D-Bus mounts are already root-equivalent, running the process as root adds no meaningful risk. The socket-proxy backlog item is the real mitigation for the socket exposure.
 
 ### compose (current dev deployment)
 As features grew (peripherals need host `/sys/class/net` for CAN; logs/cloud need the host journal + `aktualizr-info`; the file explorer writes `/etc`,`/var`), the dev container gained broader host access. This is the **dev** shape; **native (Yocto) production** needs none of these mounts.
@@ -158,7 +158,7 @@ services:
       - /var:/host/var:rw          # confined writable area
       - ./data:/data
 ```
-`group_add` for the host `docker` (990) and `systemd-journal` (988) GIDs is used instead of `user: 0` when running unprivileged (read-only feature set). Self-container detection reads the real container id from `/proc/self/mountinfo` (hostname is the host's under host networking).
+The container runs as `user: "0:0"` (root) — required for NetworkManager writes (polkit) and `/data` init; see §5. (A non-root `group_add` docker/journal setup only supports the read-only subset.) Self-container detection reads the real container id from `/proc/self/mountinfo` (hostname is the host's under host networking).
 
 ---
 

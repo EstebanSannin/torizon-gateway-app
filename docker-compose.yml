@@ -17,25 +17,26 @@ services:
     container_name: torizon-gateway
     restart: unless-stopped
 
+    # Runs as root. This container already mounts the Docker socket and the system
+    # D-Bus (both root-equivalent on the host), and NetworkManager writes (IPv4 /
+    # Wi-Fi) are authorized by polkit for root — so root is required for full
+    # function and adds no meaningful risk over what the mounts already grant. It
+    # also lets the app create its state dir on a fresh /data volume, and read the
+    # journal + Docker socket without device-specific group GIDs.
+    user: "0:0"
+
     # Host networking: required to see host interfaces (CAN, Wi-Fi) under
     # /sys/class/net and to let the self-signed cert auto-detect the LAN IP.
     # The app binds :8443 directly on the host (open https://<device-ip>:8443).
     network_mode: host
-
-    # Least-privilege: join the host groups for the Docker socket and the systemd
-    # journal by NUMERIC GID (names don't resolve in a distroless image). These
-    # are the Torizon OS defaults — verify with: getent group docker systemd-journal
-    group_add:
-      - "990"   # docker          → container management
-      - "988"   # systemd-journal → Logs (journal read)
 
     environment:
       - GATEWAY_DATA_DIR=/data
       - GATEWAY_HOST_ROOT=/host          # where the host "/" is visible in-container
       - GATEWAY_HOSTNAME=torizon-gateway # cert SAN / display name; set to taste
       # --- Optional power features (OFF by default) ---
-      # File edit/upload/delete confined to /etc,/var (secrets blocked). Requires
-      # the two rw mounts below AND running the container as root (user: "0:0").
+      # File edit/upload/delete confined to /etc,/var (secrets blocked). Enable
+      # this AND the two rw mounts below.
       # - GATEWAY_FILES_WRITABLE=1
       # In-browser SSH terminal (127.0.0.1:22; user supplies board creds; audited).
       # - GATEWAY_TERMINAL_ENABLED=1
@@ -50,9 +51,6 @@ services:
       # - /etc:/host/etc:rw
       # - /var:/host/var:rw
       - gateway-data:/data                                      # SQLite DB + TLS cert
-
-    # Uncomment to run as root — needed ONLY for the file-write feature above.
-    # user: "0:0"
 
     healthcheck:
       test: ["CMD", "/usr/local/bin/gateway-manager", "-healthcheck"]

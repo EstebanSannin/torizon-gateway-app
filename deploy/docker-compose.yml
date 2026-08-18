@@ -20,12 +20,12 @@ services:
     # in /sys/class/net, and it lets the self-signed cert auto-detect the real
     # LAN IP. The app binds :8443 directly on the host (no port mapping).
     network_mode: host
-    # Least-privilege supplementary groups by NUMERIC host GID (names don't
-    # resolve in a distroless container). Values below are Torizon defaults —
-    # verify on the device with: getent group docker systemd-journal
-    group_add:
-      - "990"   # docker          → Docker socket (container management)
-      - "988"   # systemd-journal → read the journal (Logs feature)
+    # Runs as root. The Docker socket + system D-Bus mounts are already
+    # root-equivalent, NetworkManager writes (IPv4/Wi-Fi) need polkit root, and
+    # root lets the app initialize /data on any volume — so root is required for
+    # full function and adds no meaningful risk. (Running as the image's non-root
+    # user fails: it can't write /data and polkit denies NM changes.)
+    user: "0:0"
     environment:
       - GATEWAY_DATA_DIR=/data
       - GATEWAY_HOSTNAME=zinnia
@@ -33,9 +33,8 @@ services:
       # mount table, statfs of mountpoints, and the file explorer).
       - GATEWAY_HOST_ROOT=/host
       # File explorer WRITES (edit/upload/delete), confined to /etc and /var and
-      # blocking secrets. OFF by default. To enable, set this to 1, add the two
-      # rw mounts below, and run the container as root (writes to root-owned
-      # paths). Leave off for a read-only, least-privilege deployment.
+      # blocking secrets. OFF by default. To enable, set this to 1 and add the two
+      # rw mounts below. Leave off for a read-only deployment.
       # - GATEWAY_FILES_WRITABLE=1
       # Web SSH terminal (xterm.js ↔ WebSocket ↔ SSH to the device). OFF by
       # default. Needs host networking so 127.0.0.1:22 reaches the host sshd; the

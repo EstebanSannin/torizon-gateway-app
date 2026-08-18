@@ -75,7 +75,7 @@ docs/                         ARCHITECTURE.md, DESIGN-SYSTEM.md
 The dev loop runs the **container with elevated host access** (see the on-device `~/gateway/docker-compose.yml` and `deploy/docker-compose.yml`):
 - `network_mode: host` — needed so `/sys/class/net` shows host interfaces (CAN), and so the self-signed cert auto-detects the LAN IP.
 - `user: "0:0"` (root) + `/:/host:ro` (recursive; whole host FS) + `/etc:/host/etc:rw` + `/var:/host/var:rw` — for the host mount table, statfs, journal, aktualizr-info, and confined file writes.
-- `/var/run/docker.sock` + `/run/dbus/system_bus_socket` mounts. `group_add` docker/systemd-journal GIDs if not running as root.
+- `/var/run/docker.sock` + `/run/dbus/system_bus_socket` mounts. The container runs as **root** (`user: "0:0"`): NetworkManager writes (IPv4/Wi-Fi) need polkit-root, the app must initialize `/data`, and the socket/D-Bus mounts are already root-equivalent — so root is required for the full feature set and adds no real risk. (A non-root `group_add` docker/journal setup can read but fails NM writes and `/data` init.)
 - Feature switches: `GATEWAY_FILES_WRITABLE=1`, `GATEWAY_TERMINAL_ENABLED=1` (both **off** by default).
 
 **Production is native (Yocto systemd service, root)** — direct access, no mounts/ld-exec tricks, and it survives customer app deployments (which wipe the single managed docker-compose). See ARCHITECTURE §13.
