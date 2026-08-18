@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 
 	"github.com/toradex/torizon-gateway-app/web"
 )
@@ -23,6 +24,30 @@ var tmplFuncs = template.FuncMap{
 		default:
 			return ""
 		}
+	},
+	// wifibars renders a 4-bar signal glyph filled by strength (0–100%).
+	"wifibars": func(strength int) template.HTML {
+		n := 1
+		switch {
+		case strength >= 66:
+			n = 4
+		case strength >= 45:
+			n = 3
+		case strength >= 25:
+			n = 2
+		}
+		hs := [4]int{6, 10, 14, 18}
+		var b strings.Builder
+		b.WriteString(`<svg class="bars" width="22" height="20" viewBox="0 0 22 20">`)
+		for i := 0; i < 4; i++ {
+			cls := "off"
+			if i < n {
+				cls = "on"
+			}
+			fmt.Fprintf(&b, `<rect class="%s" x="%d" y="%d" width="4" height="%d" rx="1"/>`, cls, i*6, 20-hs[i], hs[i])
+		}
+		b.WriteString(`</svg>`)
+		return template.HTML(b.String())
 	},
 }
 

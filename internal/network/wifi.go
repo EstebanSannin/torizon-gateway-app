@@ -3,6 +3,7 @@ package network
 import (
 	"errors"
 	"sort"
+	"strings"
 
 	"github.com/godbus/dbus/v5"
 )
@@ -60,6 +61,59 @@ func (s *Service) WiFiStations() ([]string, error) {
 	}
 	sort.Strings(out)
 	return out, nil
+}
+
+// WiFiConnection describes the currently-associated network on an interface.
+type WiFiConnection struct {
+	SSID        string
+	IPv4        string
+	Strength    int
+	Security    string
+	Band        string
+	Channel     int
+	BitrateMbps int
+}
+
+// WiFiActive returns the active connection details for the interface, or nil
+// when not associated.
+func (s *Service) WiFiActive(iface string) *WiFiConnection {
+	conn, err := s.connect()
+	if err != nil {
+		return nil
+	}
+	defer conn.Close()
+	dev, err := s.deviceByName(conn, iface)
+	if err != nil {
+		return nil
+	}
+	ap, _ := getObjectPath(conn, dev, wirelessIfc, "ActiveAccessPoint")
+	if ap == "" || ap == "/" {
+		return nil
+	}
+	ssid := apSSID(conn, ap)
+	if ssid == "" {
+		return nil
+	}
+	freq, _ := getUint32(conn, ap, apIface, "Frequency")
+	flags, _ := getUint32(conn, ap, apIface, "Flags")
+	wpa, _ := getUint32(conn, ap, apIface, "WpaFlags")
+	rsn, _ := getUint32(conn, ap, apIface, "RsnFlags")
+	sec, _ := apSecurity(flags, wpa, rsn)
+	band, ch := bandChannel(int(freq))
+	rate, _ := getUint32(conn, dev, wirelessIfc, "Bitrate") // kb/s
+	c := &WiFiConnection{
+		SSID: ssid, Strength: int(apByte(conn, ap, "Strength")),
+		Security: sec, Band: band, Channel: ch, BitrateMbps: int(rate) / 1000,
+	}
+	if ip4, _ := getObjectPath(conn, dev, devIface, "Ip4Config"); ip4 != "" && ip4 != "/" {
+		if addrs := ip4Addresses(conn, ip4); len(addrs) > 0 {
+			c.IPv4 = addrs[0]
+			if i := strings.IndexByte(c.IPv4, '/'); i > 0 {
+				c.IPv4 = c.IPv4[:i] // drop the /prefix for display
+			}
+		}
+	}
+	return c
 }
 
 // WiFiScan asks NetworkManager to rescan on the given Wi-Fi interface.

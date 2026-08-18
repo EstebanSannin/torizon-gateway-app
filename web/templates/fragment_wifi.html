@@ -1,116 +1,109 @@
 {{define "wifi"}}
-<div class="card stack" style="gap:16px">
-  <div class="page-header" style="margin:0">
-    <div style="display:flex; align-items:center; gap:10px">
-      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 12.5a10 10 0 0114 0M8 15.5a6 6 0 018 0M12 19h.01"/></svg></span>
-      <div>
-        <h3 style="margin:0">Wi-Fi</h3>
-        <div class="muted" style="font-size:0.78rem">{{if .Station}}Station {{.Station}}{{if .Active}} · connected to {{.Active}}{{end}}{{else}}No wireless station{{end}}</div>
-      </div>
-    </div>
-    {{if .Station}}
-    <form hx-post="/network/wifi/scan" hx-target="#wifi-section" hx-swap="innerHTML" hx-disabled-elt="find button" style="margin:0">
-      <input type="hidden" name="csrf_token" value="{{.CSRF}}">
-      <button class="btn btn--ghost btn--sm" type="submit">Scan</button>
-    </form>
+<div class="card wifi-card">
+  <div class="wifi-head">
+    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12.5a10 10 0 0114 0M8 15.5a6 6 0 018 0M12 19h.01"/></svg></span>
+    <h3>Wi-Fi</h3>
+    <span class="spacer"></span>
+    {{if .Stations}}
+      <span class="wifi-field">Interface
+        <select name="iface" hx-get="/network/wifi" hx-target="#wifi-section" hx-swap="innerHTML" hx-trigger="change" hx-include="this">
+          {{range .Stations}}<option value="{{.}}"{{if eq . $.Iface}} selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </span>
+      <form hx-post="/network/wifi/scan" hx-target="#wifi-networks" hx-swap="innerHTML" hx-disabled-elt="find button" style="margin:0">
+        <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+        <input type="hidden" name="iface" value="{{.Iface}}">
+        <button class="btn btn--primary btn--sm" type="submit">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;vertical-align:-2px"><path d="M21 21l-4.3-4.3M11 18a7 7 0 100-14 7 7 0 000 14z"/></svg>Scan
+        </button>
+      </form>
     {{end}}
   </div>
 
-  {{if .Notice}}
-    <div class="{{if .IsError}}form-error{{else}}callout callout--info{{end}}" style="margin:0">{{.Notice}}</div>
-  {{end}}
+  {{if .Notice}}<div class="{{if .IsError}}form-error{{else}}callout callout--info{{end}}" style="margin-top:12px">{{.Notice}}</div>{{end}}
 
-  {{if not .Station}}
-    <p class="muted" style="margin:0">This device has no Wi-Fi station interface, or NetworkManager does not manage it.</p>
+  {{if not .Stations}}
+    <p class="muted" style="margin-top:12px">No Wi-Fi station interface on this device.</p>
   {{else}}
-    {{if .Nets}}
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th style="width:130px">Signal</th><th>Network</th><th>Band</th><th style="text-align:right">Action</th></tr></thead>
-        <tbody>
-          {{range .Nets}}
-          <tr x-data="{open:false}">
-            <td>
-              <div style="display:flex; align-items:center; gap:8px">
-                <div class="meter" style="width:64px"><div class="meter-fill" style="width:{{.Strength}}%"></div></div>
-                <span class="muted" style="font-size:0.78rem">{{.Strength}}%</span>
-              </div>
-            </td>
-            <td>
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap">
-                <strong>{{.SSID}}</strong>
-                {{if .Active}}<span class="badge badge--running">Connected</span>{{end}}
-                {{if .Secured}}<span class="badge badge--plain">{{.Security}}</span>{{else}}<span class="badge badge--plain">Open</span>{{end}}
-                {{if .Saved}}<span class="badge badge--idle">Saved</span>{{end}}
-              </div>
-            </td>
-            <td class="muted" style="font-size:0.82rem">{{.Band}}{{if .Channel}} · ch {{.Channel}}{{end}}</td>
-            <td style="text-align:right">
-              {{if .Active}}
-                <form hx-post="/network/wifi/disconnect" hx-target="#wifi-section" hx-swap="innerHTML" style="margin:0; display:inline">
-                  <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
-                  <button class="btn btn--ghost btn--sm" type="submit">Disconnect</button>
-                </form>
-              {{else}}
-                {{if .Saved}}
-                  <form hx-post="/network/wifi/forget" hx-target="#wifi-section" hx-swap="innerHTML" style="margin:0; display:inline">
-                    <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
-                    <input type="hidden" name="ssid" value="{{.SSID}}">
-                    <button class="btn btn--ghost btn--sm" type="submit">Forget</button>
-                  </form>
-                {{end}}
-                {{if .Secured}}
-                  <button class="btn btn--primary btn--sm" type="button" x-show="!open" @click="open=true">Connect</button>
-                {{else}}
-                  <form hx-post="/network/wifi/connect" hx-target="#wifi-section" hx-swap="innerHTML" hx-disabled-elt="find button" style="margin:0; display:inline">
-                    <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
-                    <input type="hidden" name="ssid" value="{{.SSID}}">
-                    <button class="btn btn--primary btn--sm" type="submit">Connect</button>
-                  </form>
-                {{end}}
-              {{end}}
-            </td>
-          </tr>
-          {{if and .Secured (not .Active)}}
-          <tr x-show="open" x-cloak>
-            <td></td>
-            <td colspan="3">
-              <form hx-post="/network/wifi/connect" hx-target="#wifi-section" hx-swap="innerHTML" hx-disabled-elt="find button" style="margin:0; display:flex; gap:8px; align-items:center; flex-wrap:wrap">
-                <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
-                <input type="hidden" name="ssid" value="{{.SSID}}">
-                <input type="password" name="password" placeholder="Password for {{.SSID}}" autocomplete="off" style="min-width:220px" x-ref="pw">
-                <button class="btn btn--primary btn--sm" type="submit">Join</button>
-                <button class="btn btn--ghost btn--sm" type="button" @click="open=false">Cancel</button>
-              </form>
-            </td>
-          </tr>
-          {{end}}
-          {{end}}
-        </tbody>
-      </table>
-    </div>
-    {{else}}
-      <p class="muted" style="margin:0">No networks found. Press <strong>Scan</strong> to search.</p>
-    {{end}}
-
-    {{if .Saved}}
-    <div>
-      <div class="nav-label" style="margin-bottom:8px">Saved networks</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap">
-        {{range .Saved}}
-        <span class="badge badge--plain" style="gap:8px">{{.}}
-          <form hx-post="/network/wifi/forget" hx-target="#wifi-section" hx-swap="innerHTML" style="margin:0; display:inline">
-            <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
-            <input type="hidden" name="ssid" value="{{.}}">
-            <button type="submit" title="Forget {{.}}" style="background:none; border:0; color:inherit; cursor:pointer; padding:0; font-size:0.9em; line-height:1">✕</button>
-          </form>
-        </span>
-        {{end}}
+    {{with .Connected}}
+      <div class="wifi-connected">
+        <div class="wc-row1">{{wifibars .Strength}}<span class="wc-ssid">{{.SSID}}</span><span class="wifi-pill">connected</span></div>
+        <div class="wc-kv">
+          <div><span class="k">IP address</span><span class="v">{{if .IPv4}}{{.IPv4}}{{else}}—{{end}}</span></div>
+          <div><span class="k">Signal</span><span class="v">{{.Strength}}%</span></div>
+          <div><span class="k">Security</span><span class="v">{{.Security}}</span></div>
+          <div><span class="k">Band</span><span class="v">{{.Band}}{{if .Channel}} · ch {{.Channel}}{{end}}</span></div>
+          {{if .BitrateMbps}}<div><span class="k">Link rate</span><span class="v">{{.BitrateMbps}} Mbit/s</span></div>{{end}}
+        </div>
+        <form hx-post="/network/wifi/disconnect" hx-target="#wifi-section" hx-swap="innerHTML" style="margin-top:14px">
+          <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
+          <input type="hidden" name="iface" value="{{$.Iface}}">
+          <button class="btn btn--danger btn--sm" type="submit">Disconnect</button>
+        </form>
       </div>
-    </div>
     {{end}}
 
-    <p class="muted" style="margin:0; font-size:0.8rem">The passphrase is sent over HTTPS to NetworkManager, which stores it — the gateway never keeps a copy.</p>
+    <div class="wifi-sec"><h4>Available networks</h4><span class="rule"></span></div>
+    <div id="wifi-networks">
+      {{if .Scanned}}{{template "wifinets" .}}{{else}}<div class="wifi-empty">Select an interface and press <strong>Scan</strong> to search for networks.</div>{{end}}
+    </div>
+
+    <div class="wifi-sec"><h4>Saved networks</h4><span class="rule"></span></div>
+    {{range .Saved}}
+      <div class="wifi-saved-row">
+        <div style="font-weight:600">{{.}} <span class="wifi-tag wifi-tag--saved">saved</span></div>
+        <form hx-post="/network/wifi/forget" hx-target="#wifi-section" hx-swap="innerHTML" style="margin:0">
+          <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
+          <input type="hidden" name="iface" value="{{$.Iface}}">
+          <input type="hidden" name="ssid" value="{{.}}">
+          <button class="btn btn--ghost btn--sm" type="submit">Forget</button>
+        </form>
+      </div>
+    {{else}}<div class="muted" style="font-size:0.85rem">No saved networks.</div>{{end}}
   {{end}}
 </div>
+
+<div class="wifi-overlay" id="wifi-overlay" onclick="if(event.target===this)wifiClose()">
+  <div class="wifi-modal">
+    <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12.5a10 10 0 0114 0M8 15.5a6 6 0 018 0M12 19h.01"/></svg><span id="wifi-m-ssid">Network</span></h3>
+    <div class="wifi-msub" id="wifi-m-sub"></div>
+    <form hx-post="/network/wifi/connect" hx-target="#wifi-section" hx-swap="innerHTML" hx-disabled-elt="find button">
+      <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+      <input type="hidden" name="iface" value="{{.Iface}}">
+      <input type="hidden" name="ssid" id="wifi-m-ssid-input" value="">
+      <div id="wifi-m-secured">
+        <label class="wifi-lbl">Passphrase</label>
+        <div class="wifi-pw">
+          <input id="wifi-m-pw" name="password" type="password" placeholder="Enter Wi-Fi password" autocomplete="off">
+          <button type="button" id="wifi-pw-toggle" onclick="wifiTogglePw()">Show</button>
+        </div>
+      </div>
+      <div id="wifi-m-open" class="wifi-open-note" style="display:none">This is an open network — no passphrase required.</div>
+      <div class="wifi-foot">
+        <button class="btn btn--ghost" type="button" onclick="wifiClose()">Cancel</button>
+        <button class="btn btn--primary" type="submit">Connect</button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "wifinets"}}
+{{if .Notice}}<div class="{{if .IsError}}form-error{{else}}callout callout--info{{end}}" style="margin-bottom:8px">{{.Notice}}</div>{{end}}
+{{if .Nets}}
+<div class="wifi-netlist">
+  {{range .Nets}}{{if not .Active}}
+    <div class="wifi-net" onclick="wifiOpen(this)" data-ssid="{{.SSID}}" data-secured="{{if .Secured}}1{{else}}0{{end}}" data-sec="{{.Security}}" data-band="{{.Band}}" data-ch="{{.Channel}}" data-sig="{{.Strength}}">
+      {{wifibars .Strength}}
+      <div class="wifi-net-main">
+        <div class="wifi-net-name">{{.SSID}}{{if .Secured}}<svg class="wifi-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>{{end}}{{if .Saved}}<span class="wifi-tag wifi-tag--saved">saved</span>{{end}}</div>
+        <div class="wifi-net-meta">{{.Security}} · {{.Band}}{{if .Channel}} · ch {{.Channel}}{{end}} · {{.Strength}}%</div>
+      </div>
+      <svg class="wifi-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+    </div>
+  {{end}}{{end}}
+</div>
+{{else}}
+<div class="wifi-empty">No networks found. Press <strong>Scan</strong> again to retry.</div>
+{{end}}
 {{end}}
