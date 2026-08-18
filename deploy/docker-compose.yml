@@ -32,6 +32,11 @@ services:
       # rw mounts below, and run the container as root (writes to root-owned
       # paths). Leave off for a read-only, least-privilege deployment.
       # - GATEWAY_FILES_WRITABLE=1
+      # Web SSH terminal (xterm.js ↔ WebSocket ↔ SSH to the device). OFF by
+      # default. Needs host networking so 127.0.0.1:22 reaches the host sshd; the
+      # user supplies their own board credentials. Every session is audited.
+      # - GATEWAY_TERMINAL_ENABLED=1
+      # - GATEWAY_TERMINAL_SSH_HOST=127.0.0.1:22
       # Extra TLS SANs (only needed for a bridged container that can't see the
       # host IP; host networking auto-detects it). Delete data/tls/* to regen.
       # - GATEWAY_TLS_SANS=192.168.1.50,gateway.lan

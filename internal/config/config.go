@@ -38,6 +38,11 @@ type Config struct {
 	// FilesWritable enables the file explorer's edit/upload/delete (confined to
 	// /etc and /var). Off by default; requires /etc,/var mounted rw + root.
 	FilesWritable bool
+	// TerminalEnabled enables the web SSH terminal. Off by default.
+	TerminalEnabled bool
+	// TerminalSSHAddr is the fixed SSH target for the terminal (never taken from
+	// the client, to prevent using the app as an SSH pivot).
+	TerminalSSHAddr string
 	// SessionTTL is how long a login session stays valid.
 	SessionTTL time.Duration
 	// DevMode relaxes some behavior for local development (never in production).
@@ -48,19 +53,21 @@ type Config struct {
 func Load() Config {
 	dataDir := env("GATEWAY_DATA_DIR", "/data")
 	return Config{
-		ListenAddr:    env("GATEWAY_LISTEN_ADDR", ":8443"),
-		DataDir:       dataDir,
-		TLSCertFile:   env("GATEWAY_TLS_CERT", filepath.Join(dataDir, "tls", "cert.pem")),
-		TLSKeyFile:    env("GATEWAY_TLS_KEY", filepath.Join(dataDir, "tls", "key.pem")),
-		TLSSANs:       splitCSV(env("GATEWAY_TLS_SANS", "")),
-		Hostname:      env("GATEWAY_HOSTNAME", "zinnia"),
-		DockerSocket:  env("GATEWAY_DOCKER_SOCKET", "/var/run/docker.sock"),
-		DBusSocket:    env("GATEWAY_DBUS_SOCKET", "/run/dbus/system_bus_socket"),
-		SysfsPath:     env("GATEWAY_SYSFS", "/sys"),
-		HostRoot:      env("GATEWAY_HOST_ROOT", "/"),
-		FilesWritable: env("GATEWAY_FILES_WRITABLE", "") == "1",
-		SessionTTL:    envDuration("GATEWAY_SESSION_TTL", 24*time.Hour),
-		DevMode:       env("GATEWAY_DEV_MODE", "") == "1",
+		ListenAddr:      env("GATEWAY_LISTEN_ADDR", ":8443"),
+		DataDir:         dataDir,
+		TLSCertFile:     env("GATEWAY_TLS_CERT", filepath.Join(dataDir, "tls", "cert.pem")),
+		TLSKeyFile:      env("GATEWAY_TLS_KEY", filepath.Join(dataDir, "tls", "key.pem")),
+		TLSSANs:         splitCSV(env("GATEWAY_TLS_SANS", "")),
+		Hostname:        env("GATEWAY_HOSTNAME", "zinnia"),
+		DockerSocket:    env("GATEWAY_DOCKER_SOCKET", "/var/run/docker.sock"),
+		DBusSocket:      env("GATEWAY_DBUS_SOCKET", "/run/dbus/system_bus_socket"),
+		SysfsPath:       env("GATEWAY_SYSFS", "/sys"),
+		HostRoot:        env("GATEWAY_HOST_ROOT", "/"),
+		FilesWritable:   env("GATEWAY_FILES_WRITABLE", "") == "1",
+		TerminalEnabled: env("GATEWAY_TERMINAL_ENABLED", "") == "1",
+		TerminalSSHAddr: env("GATEWAY_TERMINAL_SSH_HOST", "127.0.0.1:22"),
+		SessionTTL:      envDuration("GATEWAY_SESSION_TTL", 24*time.Hour),
+		DevMode:         env("GATEWAY_DEV_MODE", "") == "1",
 	}
 }
 

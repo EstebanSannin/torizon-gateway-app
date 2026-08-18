@@ -18,6 +18,7 @@ import (
 	"github.com/toradex/torizon-gateway-app/internal/network"
 	"github.com/toradex/torizon-gateway-app/internal/store"
 	"github.com/toradex/torizon-gateway-app/internal/sysinfo"
+	"github.com/toradex/torizon-gateway-app/internal/terminal"
 	"github.com/toradex/torizon-gateway-app/web"
 )
 
@@ -32,6 +33,7 @@ type Server struct {
 	peripherals *sysinfo.Peripherals
 	syslogs     *logs.Service
 	files       *files.Service
+	terminal    *terminal.Service
 	mux         *http.ServeMux
 
 	pendMu  sync.Mutex
@@ -45,6 +47,7 @@ func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, net *n
 		peripherals: sysinfo.NewPeripherals(cfg.SysfsPath, cfg.HostRoot),
 		syslogs:     logs.New(cfg.HostRoot),
 		files:       files.New(cfg.HostRoot, cfg.FilesWritable),
+		terminal:    terminal.New(cfg.TerminalEnabled, cfg.TerminalSSHAddr),
 		mux:         http.NewServeMux(),
 		pending:     make(map[string]pendingChange),
 	}
@@ -93,6 +96,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /files/save", s.requireAuth(s.handleFileSave))
 	s.mux.HandleFunc("POST /files/upload", s.requireAuth(s.handleFileUpload))
 	s.mux.HandleFunc("POST /files/delete", s.requireAuth(s.handleFileDelete))
+	s.mux.HandleFunc("GET /terminal", s.requireAuth(s.handleTerminalPage))
+	s.mux.HandleFunc("GET /ws/terminal", s.requireAuth(s.handleTerminalWS))
 
 	// HTML fragments (htmx) — protected.
 	s.mux.HandleFunc("GET /fragment/peripherals", s.requireAuth(s.handlePeripheralsFragment))
