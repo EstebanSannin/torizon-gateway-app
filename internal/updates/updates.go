@@ -111,8 +111,10 @@ func (s *Service) Status() Status {
 	var st Status
 	if v, err := obj.GetProperty(dbusIface + ".InstallUpdatesAutomatically"); err == nil {
 		st.Available = true
+		// Per the aktualizr D-Bus spec: 0 (default) = install automatically,
+		// 1 = require consent. Only enforced when a client actively manages it.
 		if i, ok := v.Value().(int32); ok {
-			st.AutoInstall = i != 0
+			st.AutoInstall = i == 0
 		}
 	}
 	if v, err := obj.GetProperty(dbusIface + ".ConsentRequired"); err == nil {
@@ -157,6 +159,98 @@ func (s *Service) SetPolling(seconds int) error {
 		return fmt.Errorf("write config: %w", err)
 	}
 	return s.restartAktualizr()
+}
+
+// OfflineSource is a candidate Secure Offline Update (Lockbox) found on the
+// device — a directory whose root contains a "metadata" folder.
+type OfflineSource struct {
+	Path      string // host path (what OfflineUpdate receives)
+	HasImages bool   // an "images" directory is also present
+}
+
+// OfflineSources scans mounted removable media for Lockbox directories. Best
+// effort: a USB plugged in after the container started may not be visible, in
+// which case the operator can enter the path directly.
+func (s *Service) OfflineSources() []OfflineSource {
+	var out []OfflineSource
+	seen := map[string]bool{}
+	add := func(dir string) {
+		// Dedupe by resolved path — /media is a symlink to /var/rootdirs/media,
+		// so the same Lockbox is reachable under multiple scan roots.
+		real := dir
+		if r, err := filepath.EvalSymlinks(dir); err == nil {
+			real = r
+		}
+		if seen[real] {
+			return
+		}
+		if md, err := os.Stat(filepath.Join(dir, "metadata")); err != nil || !md.IsDir() {
+			return
+		}
+		seen[real] = true
+		_, imgErr := os.Stat(filepath.Join(dir, "images"))
+		out = append(out, OfflineSource{Path: s.unhost(dir), HasImages: imgErr == nil})
+	}
+	for _, root := range []string{"media", "run/media", "var/rootdirs/media"} {
+		base := filepath.Join(s.hostRoot, root)
+		entries, err := os.ReadDir(base)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			d1 := filepath.Join(base, e.Name())
+			add(d1) // the mount root
+			if sub, err := os.ReadDir(d1); err == nil {
+				for _, se := range sub { // one level down (mount/<subdir>)
+					if se.IsDir() {
+						add(filepath.Join(d1, se.Name()))
+					}
+				}
+			}
+		}
+	}
+	return out
+}
+
+// ValidateLockbox checks that a host path looks like a Lockbox (has metadata/).
+func (s *Service) ValidateLockbox(hostPath string) (OfflineSource, error) {
+	if hostPath == "" {
+		return OfflineSource{}, errors.New("no path given")
+	}
+	dir := filepath.Join(s.hostRoot, strings.TrimPrefix(hostPath, "/"))
+	if md, err := os.Stat(filepath.Join(dir, "metadata")); err != nil || !md.IsDir() {
+		return OfflineSource{}, errors.New("no metadata/ directory found at " + hostPath)
+	}
+	_, imgErr := os.Stat(filepath.Join(dir, "images"))
+	return OfflineSource{Path: hostPath, HasImages: imgErr == nil}, nil
+}
+
+// OfflineUpdate asks aktualizr to validate and install the Lockbox at the given
+// host path (org.uptane.Aktualizr.OfflineUpdate). The device verifies the
+// signatures against its own root of trust, installs, and reboots.
+func (s *Service) OfflineUpdate(hostPath string) error {
+	conn, err := s.connect()
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	return conn.Object(dbusDest, dbusPath).Call(dbusIface+".OfflineUpdate", 0, hostPath).Err
+}
+
+// unhost strips the container's host-root prefix, yielding the path as aktualizr
+// (running on the host) sees it.
+func (s *Service) unhost(dir string) string {
+	if s.hostRoot == "" || s.hostRoot == "/" {
+		return dir
+	}
+	p := strings.TrimPrefix(dir, s.hostRoot)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	return p
 }
 
 // restartAktualizr restarts the update client via the systemd D-Bus manager.

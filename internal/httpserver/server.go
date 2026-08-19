@@ -105,6 +105,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /updates", s.requireAuth(s.handleUpdates))
 	s.mux.HandleFunc("POST /updates/check", s.requireAuth(s.handleUpdatesCheck))
 	s.mux.HandleFunc("POST /updates/polling", s.requireAuth(s.handleUpdatesPolling))
+	s.mux.HandleFunc("POST /updates/offline", s.requireAuth(s.handleUpdatesOffline))
 	s.mux.HandleFunc("GET /cloud", s.requireAuth(s.handleCloudPage))
 	s.mux.HandleFunc("GET /logs", s.requireAuth(s.handleLogsPage))
 	s.mux.HandleFunc("GET /files", s.requireAuth(s.handleFiles))

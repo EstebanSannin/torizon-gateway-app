@@ -12,7 +12,7 @@ From a browser on the local network, an operator can manage the device without a
 - 📁 **Files** — browse the filesystem; edit text / upload / delete, confined to `/etc` and `/var` (secrets blocked, audited).
 - 🖥️ **Terminal** — an in-browser SSH shell for debugging.
 - ☁️ **Torizon Cloud** — provisioning status, device identity, update state, subsystems (with the docker-compose app's containers), and whether the aktualizr + remote-access daemons are running.
-- ⬇️ **Updates** — aktualizr configuration (online/offline mode, server, install policy), current state, the primary + secondary **ECUs** with per-ECU up-to-date status, a **Check now** button (over D-Bus), and an **editable polling interval**. Signed offline (Lockbox) apply + per-update approval are on the roadmap.
+- ⬇️ **Updates** — aktualizr configuration (online/offline mode, server, install policy), current state, the primary + secondary **ECUs** with per-ECU up-to-date status, a **Check now** button (over D-Bus), an **editable polling interval**, and **offline (Lockbox) update apply** — pick a signed Lockbox from removable media or a path and install it with no server needed (verified on hardware). Web upload of a Lockbox + per-update approval are on the roadmap.
 
 ## Design at a glance
 

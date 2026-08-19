@@ -137,9 +137,11 @@ type updatesData struct {
 	Status     updates.Status
 	Cloud      cloud.Info // ECUs/subsystems + update state (aktualizr-info)
 	Writable   bool       // polling config is editable
+	Offline    []updates.OfflineSource
 	Notice     string
 	IsError    bool
 	Checked    bool // a check was just triggered
+	Applying   bool // an offline update was just triggered
 }
 
 // handleUpdates shows the update client configuration + state.
@@ -208,9 +210,36 @@ func (s *Server) renderUpdates(w http.ResponseWriter, r *http.Request, notice st
 		data.Config = s.updates.ReadConfig()
 		data.Status = s.updates.Status()
 		data.Writable = s.updates.ConfigWritable()
+		data.Offline = s.updates.OfflineSources()
 	}
 	if s.cloud != nil {
 		data.Cloud = s.cloud.Get(r.Context())
 	}
+	render(w, "updates.html", data)
+}
+
+// handleUpdatesOffline validates the given Lockbox path and asks aktualizr to
+// apply it. This installs an update and reboots the device.
+func (s *Server) handleUpdatesOffline(w http.ResponseWriter, r *http.Request) {
+	if !checkCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	if s.updates == nil {
+		s.renderUpdates(w, r, "Update client unavailable.", true, false)
+		return
+	}
+	path := strings.TrimSpace(r.PostFormValue("path"))
+	if _, err := s.updates.ValidateLockbox(path); err != nil {
+		s.renderUpdates(w, r, "Not a valid offline update: "+err.Error(), true, false)
+		return
+	}
+	if err := s.updates.OfflineUpdate(path); err != nil {
+		_ = s.store.AddAudit(userFrom(r).Username, "offline_update_failed", path+": "+err.Error(), clientIP(r))
+		s.renderUpdates(w, r, "Could not start the offline update: "+err.Error(), true, false)
+		return
+	}
+	_ = s.store.AddAudit(userFrom(r).Username, "offline_update", path, clientIP(r))
+	data := updatesData{layout: s.layoutFor(w, r, "Updates", "updates"), Applying: true}
 	render(w, "updates.html", data)
 }

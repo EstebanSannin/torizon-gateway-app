@@ -35,7 +35,8 @@ Primary goals:
 | **Torizon Cloud** — provisioning, device, update state, subsystems, daemon status | ✅ |
 | **Auth** — first-boot setup, argon2id, sessions, CSRF, audit | ✅ |
 | **Updates** — aktualizr config/mode, current state, ECU/target list (per-ECU up-to-date), Check-now (D-Bus), editable polling interval | ✅ |
-| **Offline updates** — Torizon Secure Offline Updates (Lockbox) apply + per-update approval (Consent) | ⏳ Phase 3 |
+| **Offline updates** — Secure Offline Update (Lockbox) apply from removable media or a path (D-Bus `OfflineUpdate`), validated on hardware | ✅ |
+| **Offline updates — web upload + per-update approval (Consent)** | ⏳ roadmap |
 
 ---
 
@@ -238,7 +239,7 @@ Trade-off accepted: no heavy client-side state. If a future screen truly needs i
 
 ### 8.4 Updates  (aktualizr control + Torizon Secure Offline Updates)
 - **Built:** the Updates page reads the merged aktualizr `conf.d` (mode/server/polling/rollback/install-policy) and `aktualizr-info` (OS/version/OSTree deployment, ECU/target list with per-ECU up-to-date from director-targets), and drives the client over the system D-Bus name **`org.uptane.Aktualizr`** — **Check now** (`CheckForUpdates`), and an **editable polling interval** (write `/etc/sota/conf.d/60-polling-interval.toml` + restart via `systemd1.RestartUnit`). The daemon also exposes `Consent(b,s)` and `OfflineUpdate(s)` — so the once-open "host trigger interface" (former decision 16.4) is **resolved**: it's these D-Bus methods.
-- **Offline (roadmap):** a signed **Lockbox** bundle (TorizonCore Builder / Platform) via USB or web upload → stage to a path → call `OfflineUpdate(<path>)`. Signature verification + rollback stay in the **Torizon host** mechanism — we do **not** reimplement signing. Needs an offline-provisioned device to validate.
+- **Offline (built + validated):** pick a signed **Lockbox** (a dir with `metadata/` + `images/`) — auto-detected on mounted removable media or entered by path — then `OfflineUpdate(<path>)` over D-Bus; the device verifies against its own root of trust, installs, and reboots. Signature verification + rollback stay in the **Torizon host** mechanism — we do **not** reimplement signing. **Verified on a Verdin:** applied a Lockbox and the OS went 7.7.0 → 7.8.0-devel, auto-rollback on failure. Web upload of a Lockbox archive (extract server-side) is the remaining input method.
 - **Approval (roadmap):** opt-in "require approval" — the gateway becomes the consent manager (holds `InstallUpdatesAutomatically=0`, answers `ConsentRequired` with `Consent(true/false, target)`). Default is auto-install.
 - **Safety:** Check-now confirms (may install + reboot on an auto-install device); polling change confirms + restarts the client; both audited. Offline apply will show a pre-apply summary + explicit confirm.
 
