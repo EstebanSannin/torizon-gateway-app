@@ -25,6 +25,17 @@ var tmplFuncs = template.FuncMap{
 			return ""
 		}
 	},
+	// dict builds a map from key/value pairs, for passing multiple values to a
+	// nested template (e.g. one GPIO row).
+	"dict": func(kv ...any) map[string]any {
+		m := make(map[string]any, len(kv)/2)
+		for i := 0; i+1 < len(kv); i += 2 {
+			if k, ok := kv[i].(string); ok {
+				m[k] = kv[i+1]
+			}
+		}
+		return m
+	},
 	// wifibars renders a 4-bar signal glyph filled by strength (0–100%).
 	"wifibars": func(strength int) template.HTML {
 		n := 1

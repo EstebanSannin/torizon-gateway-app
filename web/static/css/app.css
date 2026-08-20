@@ -241,6 +241,20 @@ input:focus, select:focus { outline: none; border-color: var(--color-accent); bo
 .stack { display: flex; flex-direction: column; gap: 16px; }
 .empty { color: var(--color-text-muted); padding: 28px; text-align: center; }
 
+/* ============ GPIO ============ */
+.gpio-filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.gpio-filters .chip { border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text-muted); border-radius: 999px; padding: 5px 13px; font: inherit; font-size: 0.8rem; cursor: pointer; font-weight: 600; }
+.gpio-filters .chip.on { background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent-strong); }
+.gpio-chip { padding: 0; margin-bottom: 12px; }
+.gpio-chip > summary { display: flex; align-items: center; gap: 10px; padding: 13px 16px; cursor: pointer; list-style: none; }
+.gpio-chip > summary::-webkit-details-marker { display: none; }
+.gpio-chip > summary .ico { width: 30px; height: 30px; flex: 0 0 30px; }
+.gdir { font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 5px; }
+.gdir.in { background: var(--color-surface-alt); color: var(--color-text-muted); border: 1px solid var(--color-border); }
+.gdir.out { background: var(--color-accent-soft); color: var(--color-accent-strong); }
+.gval-hi { color: var(--status-ok); }
+.gpio-chip .acts .btn { padding: 3px 9px; font-size: 0.75rem; }
+
 /* ============ Wi-Fi section ============ */
 .wifi-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .wifi-head h3 { margin: 0; font-size: 1.1rem; font-weight: 700; letter-spacing: -0.3px; }

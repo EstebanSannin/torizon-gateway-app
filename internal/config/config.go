@@ -40,6 +40,8 @@ type Config struct {
 	FilesWritable bool
 	// TerminalEnabled enables the web SSH terminal. Off by default.
 	TerminalEnabled bool
+	// GpioWritable enables driving GPIO outputs from the UI. Off by default.
+	GpioWritable bool
 	// TerminalSSHAddr is the fixed SSH target for the terminal (never taken from
 	// the client, to prevent using the app as an SSH pivot).
 	TerminalSSHAddr string
@@ -65,6 +67,7 @@ func Load() Config {
 		HostRoot:        env("GATEWAY_HOST_ROOT", "/"),
 		FilesWritable:   env("GATEWAY_FILES_WRITABLE", "") == "1",
 		TerminalEnabled: env("GATEWAY_TERMINAL_ENABLED", "") == "1",
+		GpioWritable:    env("GATEWAY_GPIO_WRITABLE", "") == "1",
 		TerminalSSHAddr: env("GATEWAY_TERMINAL_SSH_HOST", "127.0.0.1:22"),
 		SessionTTL:      envDuration("GATEWAY_SESSION_TTL", 24*time.Hour),
 		DevMode:         env("GATEWAY_DEV_MODE", "") == "1",

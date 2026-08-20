@@ -32,6 +32,7 @@ Primary goals:
 | **Logs** — systemd journal + kernel, filter by unit, realtime | ✅ |
 | **File explorer** — browse (read-only) + edit/upload/delete confined to /etc,/var | ✅ |
 | **Web terminal** — in-browser SSH shell | ✅ |
+| **GPIO** — chardev line inventory (names/consumer/dir/used), read free lines, gated drive+hold outputs (pure-Go uAPI, no libgpiod) | ✅ |
 | **Torizon Cloud** — provisioning, device, update state, subsystems, daemon status | ✅ |
 | **Auth** — first-boot setup, argon2id, sessions, CSRF, audit | ✅ |
 | **Updates** — aktualizr config/mode, current state, ECU/target list (per-ECU up-to-date), Check-now (D-Bus), editable polling interval | ✅ |

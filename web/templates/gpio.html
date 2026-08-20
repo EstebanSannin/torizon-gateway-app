@@ -1,0 +1,77 @@
+{{define "content"}}
+<div class="page-header">
+  <p class="muted" style="margin:0">Kernel GPIO character device — {{len .Chips}} controllers. Reading is safe; only free lines can be driven.</p>
+  {{if .Writable}}<span class="badge badge--warn">writes enabled</span>{{else}}<span class="badge badge--plain">read-only</span>{{end}}
+</div>
+<div id="gpio-body">{{template "gpiobody" .}}</div>
+<script>
+function gpioFilter(kind, btn){
+  document.querySelectorAll('#gpio-body .lrow').forEach(function(tr){
+    var used = tr.dataset.used==='1', named = tr.dataset.named==='1';
+    var show = kind==='all' || (kind==='named'&&named) || (kind==='free'&&!used) || (kind==='inuse'&&used);
+    tr.style.display = show ? '' : 'none';
+  });
+  document.querySelectorAll('#gpio-body .gpio-filters .chip').forEach(function(b){b.classList.remove('on');});
+  if(btn) btn.classList.add('on');
+}
+</script>
+{{end}}
+
+{{define "gpiobody"}}
+{{if .Writable}}<div class="callout callout--warn" style="margin-bottom:14px"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" style="flex:0 0 18px;margin-top:1px"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div>Driving a line wired to hardware (a regulator, reset, or an input) can crash or <strong>damage the board</strong>. Only <strong>free</strong> lines are settable; each write is confirmed and audited.</div></div>{{end}}
+
+<div class="gpio-filters">
+  <button class="chip on" type="button" onclick="gpioFilter('all',this)">All</button>
+  <button class="chip" type="button" onclick="gpioFilter('named',this)">Named</button>
+  <button class="chip" type="button" onclick="gpioFilter('free',this)">Free</button>
+  <button class="chip" type="button" onclick="gpioFilter('inuse',this)">In use</button>
+</div>
+
+{{if not .Chips}}<div class="empty">No GPIO controllers found. Ensure the container can access <span class="mono">/dev/gpiochip*</span>.</div>{{end}}
+
+{{range .Chips}}
+{{$chip := .Dev}}
+<details class="card gpio-chip"{{if eq .Dev "gpiochip0"}} open{{end}}>
+  <summary>
+    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg></span>
+    <span><strong>{{.Dev}}</strong> <span class="mono muted" style="font-size:0.8rem">{{.Label}}</span></span>
+    <span style="flex:1"></span>
+    <span class="badge badge--plain">{{.NumLines}} lines</span>
+    {{if .UsedN}}<span class="badge badge--idle">{{.UsedN}} in use</span>{{end}}
+  </summary>
+  <div class="table-wrap"><table>
+    <thead><tr><th style="width:48px">Line</th><th>Name</th><th>Consumer</th><th>Dir</th><th>Value</th><th style="text-align:right">Actions</th></tr></thead>
+    <tbody>
+    {{range .Lines}}{{template "gpiorow" (dict "Line" . "Chip" $chip "Writable" $.Writable "CSRF" $.CSRF)}}{{end}}
+    </tbody>
+  </table></div>
+</details>
+{{end}}
+{{end}}
+
+{{define "gpiorow"}}
+<tr class="lrow" data-used="{{if .Line.Used}}1{{else}}0{{end}}" data-named="{{if .Line.Name}}1{{else}}0{{end}}">
+  <td class="mono">{{.Line.Offset}}</td>
+  <td class="mono">{{if .Line.Name}}{{.Line.Name}}{{else}}<span class="muted">—</span>{{end}}</td>
+  <td>{{if .Line.Consumer}}{{.Line.Consumer}}{{if .Line.HeldByUs}} <span class="badge badge--ok" style="height:18px">gateway</span>{{end}}{{else}}<span class="muted">—</span>{{end}}</td>
+  <td><span class="gdir {{if .Line.Output}}out{{else}}in{{end}}">{{if .Line.Output}}out{{else}}in{{end}}</span></td>
+  <td class="mono">{{if ge .Line.Value 0}}<strong{{if eq .Line.Value 1}} class="gval-hi"{{end}}>{{.Line.Value}}</strong>{{else}}<span class="muted">—</span>{{end}}</td>
+  <td class="acts" style="text-align:right; white-space:nowrap">
+    {{if .Line.HeldByUs}}
+      {{if .Writable}}
+        <button class="btn btn--ghost btn--sm" hx-post="/gpio/set" hx-target="closest tr" hx-swap="outerHTML" hx-vals='{"csrf_token":"{{.CSRF}}","chip":"{{.Chip}}","offset":"{{.Line.Offset}}","value":"1"}'>Hi</button>
+        <button class="btn btn--ghost btn--sm" hx-post="/gpio/set" hx-target="closest tr" hx-swap="outerHTML" hx-vals='{"csrf_token":"{{.CSRF}}","chip":"{{.Chip}}","offset":"{{.Line.Offset}}","value":"0"}'>Lo</button>
+      {{end}}
+      <button class="btn btn--ghost btn--sm" hx-post="/gpio/release" hx-target="closest tr" hx-swap="outerHTML" hx-confirm="Release {{.Chip}} line {{.Line.Offset}} back to the system?" hx-vals='{"csrf_token":"{{.CSRF}}","chip":"{{.Chip}}","offset":"{{.Line.Offset}}"}'>Release</button>
+    {{else if .Line.Used}}
+      <span class="badge badge--idle">in use</span>
+    {{else}}
+      <button class="btn btn--ghost btn--sm" hx-post="/gpio/read" hx-target="closest tr" hx-swap="outerHTML" hx-vals='{"csrf_token":"{{.CSRF}}","chip":"{{.Chip}}","offset":"{{.Line.Offset}}"}'>Read</button>
+      {{if .Writable}}
+        <button class="btn btn--ghost btn--sm" hx-post="/gpio/set" hx-target="closest tr" hx-swap="outerHTML" hx-confirm="Drive {{.Chip}} line {{.Line.Offset}} HIGH? Make sure nothing external is wired to it." hx-vals='{"csrf_token":"{{.CSRF}}","chip":"{{.Chip}}","offset":"{{.Line.Offset}}","value":"1"}'>Hi</button>
+        <button class="btn btn--ghost btn--sm" hx-post="/gpio/set" hx-target="closest tr" hx-swap="outerHTML" hx-confirm="Drive {{.Chip}} line {{.Line.Offset}} LOW? Make sure nothing external is wired to it." hx-vals='{"csrf_token":"{{.CSRF}}","chip":"{{.Chip}}","offset":"{{.Line.Offset}}","value":"0"}'>Lo</button>
+      {{end}}
+    {{end}}
+  </td>
+</tr>
+{{end}}

@@ -38,6 +38,7 @@ internal/files/               host filesystem browse (read-only, traversal-safe)
 internal/terminal/            web SSH shell: x/crypto/ssh to localhost, proxied over a WebSocket (gorilla)
 internal/cloud/               Torizon Cloud/OTA status via aktualizr-info (host binary) + process status via /proc scan
 internal/updates/             aktualizr config parse (merged conf.d) + D-Bus client (org.uptane.Aktualizr): CheckForUpdates, status; SetPolling (writes fragment + RestartUnit via systemd D-Bus); OfflineSources/ValidateLockbox + OfflineUpdate (apply a Lockbox — validated on-device). Web upload of a Lockbox + per-update Consent are roadmap
+internal/gpio/                GPIO character device (/dev/gpiochipN) via v1 uAPI ioctls (pure stdlib syscall, no cgo/libgpiod): Chips (line inventory: name/consumer/dir/used), ReadLine (momentary), SetLine (drive + hold), ReleaseLine. Needs device_cgroup_rules for the gpiochip major in the container
 web/embed.go                  //go:embed templates + static
 web/templates/                base.html + one file per page ({{define "content"}}) + fragment_*.html (htmx-polled)
 web/static/css/               tokens.css (brand; light + full dark palette) + app.css (components)
@@ -67,6 +68,7 @@ docs/                         ARCHITECTURE.md, DESIGN-SYSTEM.md
 - **systemd journal & `aktualizr-info`:** these are host binaries not present in the distroless container. We run them **via the host dynamic loader** against the host filesystem: `"$hostRoot/lib/ld-*.so" --library-path <host libs incl. /usr/lib/systemd> "$hostRoot/usr/bin/<binary>" ...`, with journal at `/host/run/log/journal` and a generated aktualizr config pointing storage at `/host/var/sota`. Natively these are just `journalctl`/`aktualizr-info`. Requires root + `systemd-journal` group. (`GATEWAY_JOURNALCTL` overrides.) Write the generated config to the **data dir**, not `/tmp` (distroless has no writable `/tmp`).
 - **NetworkManager Wi-Fi:** same system D-Bus — `Device.Wireless` RequestScan/GetAllAccessPoints (SSID/signal/security/band/channel), AddAndActivateConnection to join (PSK/SAE), DeactivateConnection, Settings.Connection.Delete to forget, and ActiveAccessPoint + Bitrate for the connected panel.
 - **rtnetlink (CAN):** CAN controller details (bitrate, ERROR-ACTIVE/BUS-OFF state, sample-point, clock, FD, error counters) live only in netlink IFLA_CAN_* attrs — read in pure Go via `syscall.NetlinkRIB(RTM_GETLINK)`, no `ip` binary. Traffic counters come from sysfs `statistics/`.
+- **GPIO (chardev):** `/dev/gpiochipN` via the GPIO **v1 uAPI ioctls** in pure stdlib (`syscall.SYS_IOCTL` + the uAPI structs) — no cgo/libgpiod. `GET_CHIPINFO`/`GET_LINEINFO` are passive (safe inventory: name/consumer/direction/used); reading a value momentarily requests a free line as input; setting requests it as output and **holds the fd** (the gateway becomes the line's consumer) so the level persists. In the container this needs `device_cgroup_rules: ["c <gpio-major>:* rmw"]` (254 on Torizon); the device nodes are reached via the `/host/dev/gpiochipN` bind (opening a chardev O_RDWR works even though `/host` is ro).
 - **Terminal:** SSH to a **fixed** target (`127.0.0.1:22`, never client-supplied) using the user's board credentials; proxied over a WebSocket to xterm.js.
 - **Process status (cloud):** scan `<hostRoot>/proc/*/comm` for `aktualizr*` and `rac` — no systemd/D-Bus dependency.
 - **aktualizr control (updates):** the update client owns the system D-Bus name **`org.uptane.Aktualizr`** (`/org/uptane/aktualizr`) — methods `CheckForUpdates` / `Consent(b,s)` / `OfflineUpdate(s)` / `Cancel`, properties `ConsentRequired` / `InstallUpdatesAutomatically`. "Check now" is a clean `CheckForUpdates` call (no daemon restart). Changing the **polling interval** writes `/etc/sota/conf.d/60-polling-interval.toml` and restarts the client via **systemd D-Bus** (`org.freedesktop.systemd1.Manager.RestartUnit`). ECU/target list + real up-to-date comparison come from `aktualizr-info` (reused from `internal/cloud`; director-targets desired-hash vs installed).
@@ -82,7 +84,7 @@ The dev loop runs the **container with elevated host access** (see the on-device
 **Production is native (Yocto systemd service, root)** — direct access, no mounts/ld-exec tricks, and it survives customer app deployments (which wipe the single managed docker-compose). See ARCHITECTURE §13.
 
 ### Config env vars
-`GATEWAY_DATA_DIR` `GATEWAY_LISTEN_ADDR` `GATEWAY_TLS_CERT` `GATEWAY_TLS_KEY` `GATEWAY_TLS_SANS` `GATEWAY_HOSTNAME` `GATEWAY_DOCKER_SOCKET` `GATEWAY_DBUS_SOCKET` `GATEWAY_SYSFS` `GATEWAY_HOST_ROOT` `GATEWAY_FILES_WRITABLE` `GATEWAY_TERMINAL_ENABLED` `GATEWAY_TERMINAL_SSH_HOST` `GATEWAY_SESSION_TTL` `GATEWAY_DEV_MODE`.
+`GATEWAY_DATA_DIR` `GATEWAY_LISTEN_ADDR` `GATEWAY_TLS_CERT` `GATEWAY_TLS_KEY` `GATEWAY_TLS_SANS` `GATEWAY_HOSTNAME` `GATEWAY_DOCKER_SOCKET` `GATEWAY_DBUS_SOCKET` `GATEWAY_SYSFS` `GATEWAY_HOST_ROOT` `GATEWAY_FILES_WRITABLE` `GATEWAY_TERMINAL_ENABLED` `GATEWAY_TERMINAL_SSH_HOST` `GATEWAY_GPIO_WRITABLE` `GATEWAY_SESSION_TTL` `GATEWAY_DEV_MODE`.
 
 ## How to add a feature (recipe)
 
@@ -123,6 +125,7 @@ The m920x is logged into Docker Hub as `samnite`; never handle registry credenti
 - **Logs** — journal + kernel, filter by unit, realtime.
 - **Files** — browse read-only; edit/upload/delete confined to /etc,/var (secrets denylist, off by default).
 - **Terminal** — in-browser SSH shell (off by default).
+- **GPIO** — per-controller line inventory (SODIMM names, consumer, direction, in-use) via the GPIO chardev; **read** a free line, and **drive + hold** a free output (Hi/Lo/Release) gated by `GATEWAY_GPIO_WRITABLE` (off by default) with per-line confirm + audit. Per-row htmx swaps (no page jump).
 - **Torizon Cloud** — provisioning, device, update state, subsystems (expandable containers), aktualizr + remote-access process status.
 - **Updates** — aktualizr **configuration** (Online/Offline mode, server, polling, rollback, install policy), **current state** (OS/version/OSTree deployment, up-to-date/available/updating), **ECU/target list** (primary + secondaries with per-ECU up-to-date via director-targets), **Check now** (D-Bus), **editable polling interval** (write + restart), and **offline update apply** — pick a Lockbox (detected on removable media or by path) → `OfflineUpdate` D-Bus → device verifies/installs/reboots (**validated on a Verdin**: 7.7.0 → 7.8.0 via a Lockbox). Web upload of a Lockbox + per-update approval (Consent) remain.
 - **Auth** — first-boot, argon2id, sessions, CSRF, audit.

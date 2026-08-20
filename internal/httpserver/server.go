@@ -17,6 +17,7 @@ import (
 	"github.com/toradex/torizon-gateway-app/internal/config"
 	"github.com/toradex/torizon-gateway-app/internal/containers"
 	"github.com/toradex/torizon-gateway-app/internal/files"
+	"github.com/toradex/torizon-gateway-app/internal/gpio"
 	"github.com/toradex/torizon-gateway-app/internal/hal"
 	"github.com/toradex/torizon-gateway-app/internal/logs"
 	"github.com/toradex/torizon-gateway-app/internal/network"
@@ -41,6 +42,7 @@ type Server struct {
 	terminal    *terminal.Service
 	cloud       *cloud.Service
 	updates     *updates.Service
+	gpio        *gpio.Service
 	mux         *http.ServeMux
 
 	pendMu  sync.Mutex
@@ -57,6 +59,7 @@ func New(cfg config.Config, board hal.BoardInfo, cnt *containers.Service, net *n
 		terminal:    terminal.New(cfg.TerminalEnabled, cfg.TerminalSSHAddr),
 		cloud:       cloud.New(cfg.HostRoot, cfg.DataDir),
 		updates:     updates.New(cfg.DBusSocket, cfg.HostRoot),
+		gpio:        gpio.New(cfg.HostRoot, cfg.GpioWritable),
 		mux:         http.NewServeMux(),
 		pending:     make(map[string]pendingChange),
 	}
@@ -116,6 +119,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /files/delete", s.requireAuth(s.handleFileDelete))
 	s.mux.HandleFunc("GET /terminal", s.requireAuth(s.handleTerminalPage))
 	s.mux.HandleFunc("GET /ws/terminal", s.requireAuth(s.handleTerminalWS))
+	s.mux.HandleFunc("GET /gpio", s.requireAuth(s.handleGPIO))
+	s.mux.HandleFunc("POST /gpio/read", s.requireAuth(s.handleGPIORead))
+	s.mux.HandleFunc("POST /gpio/set", s.requireAuth(s.handleGPIOSet))
+	s.mux.HandleFunc("POST /gpio/release", s.requireAuth(s.handleGPIORelease))
 
 	// HTML fragments (htmx) — protected.
 	s.mux.HandleFunc("GET /fragment/peripherals", s.requireAuth(s.handlePeripheralsFragment))

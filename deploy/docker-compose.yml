@@ -26,9 +26,16 @@ services:
     # full function and adds no meaningful risk. (Running as the image's non-root
     # user fails: it can't write /data and polkit denies NM changes.)
     user: "0:0"
+    # GPIO character devices (/dev/gpiochip*) for the GPIO page. 254 is the
+    # gpiochip major on Torizon — check `ls -l /dev/gpiochip0` if a board differs.
+    device_cgroup_rules:
+      - "c 254:* rmw"
     environment:
       - GATEWAY_DATA_DIR=/data
       - GATEWAY_HOSTNAME=zinnia
+      # Drive GPIO outputs from the UI (free lines only; per-line confirm; audited).
+      # OFF by default — leave off for a read-only GPIO inventory.
+      # - GATEWAY_GPIO_WRITABLE=1
       # Where the host filesystem "/" is visible in the container (for the host
       # mount table, statfs of mountpoints, and the file explorer).
       - GATEWAY_HOST_ROOT=/host

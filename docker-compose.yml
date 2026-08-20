@@ -30,6 +30,13 @@ services:
     # The app binds :8443 directly on the host (open https://<device-ip>:8443).
     network_mode: host
 
+    # Access to the GPIO character devices (/dev/gpiochip*) for the GPIO page.
+    # Grants the container's device cgroup the gpiochip major (254 on Torizon —
+    # adjust if `ls -l /dev/gpiochip0` shows a different major). Read-only line
+    # inventory works with this; driving outputs also needs GATEWAY_GPIO_WRITABLE.
+    device_cgroup_rules:
+      - "c 254:* rmw"
+
     environment:
       - GATEWAY_DATA_DIR=/data
       - GATEWAY_HOST_ROOT=/host          # where the host "/" is visible in-container
@@ -40,6 +47,8 @@ services:
       # - GATEWAY_FILES_WRITABLE=1
       # In-browser SSH terminal (127.0.0.1:22; user supplies board creds; audited).
       # - GATEWAY_TERMINAL_ENABLED=1
+      # Drive GPIO outputs from the UI (free lines only, per-line confirm, audited).
+      # - GATEWAY_GPIO_WRITABLE=1
       # Extra TLS SANs if the host IP isn't auto-detected (delete data/tls/* to regen).
       # - GATEWAY_TLS_SANS=192.168.1.50,gateway.lan
 
